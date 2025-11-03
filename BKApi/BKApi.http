@@ -1,0 +1,6 @@
+@BKApi_HostAddress = http://localhost:5030
+
+GET {{BKApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
