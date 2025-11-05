@@ -364,6 +364,103 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Destinations");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            AverageRating = 4.7m,
+                            Country = "Vietnam",
+                            CreatedAt = new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "A UNESCO World Heritage Site featuring thousands of limestone karsts and islands in emerald waters.",
+                            DisplayOrder = 1,
+                            ImageUrl = "https://images.unsplash.com/photo-1528127269322-539801943592",
+                            IsDeleted = false,
+                            IsFeatured = true,
+                            MetaDescription = "Explore the breathtaking Ha Long Bay with luxury cruises and adventure tours.",
+                            MetaTitle = "Ha Long Bay Tours - UNESCO Heritage Site",
+                            Name = "Ha Long Bay",
+                            Slug = "ha-long-bay",
+                            StartingPrice = 1200000m,
+                            TotalReviews = 2145,
+                            TourCount = 15
+                        },
+                        new
+                        {
+                            Id = 2,
+                            AverageRating = 4.8m,
+                            Country = "Vietnam",
+                            CreatedAt = new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "A well-preserved ancient town showcasing a blend of Vietnamese, Chinese, Japanese, and European architecture.",
+                            DisplayOrder = 2,
+                            ImageUrl = "https://images.unsplash.com/photo-1583417319070-4a69db38a482",
+                            IsDeleted = false,
+                            IsFeatured = true,
+                            MetaDescription = "Discover the charming streets of Hoi An, famous for lanterns, tailors, and cultural heritage.",
+                            MetaTitle = "Hoi An Tours - Ancient Town & Lantern Festival",
+                            Name = "Hoi An Ancient Town",
+                            Slug = "hoi-an-ancient-town",
+                            StartingPrice = 800000m,
+                            TotalReviews = 1890,
+                            TourCount = 20
+                        },
+                        new
+                        {
+                            Id = 3,
+                            AverageRating = 4.6m,
+                            Country = "Vietnam",
+                            CreatedAt = new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Mountain town known for stunning rice terraces, ethnic minority villages, and trekking adventures.",
+                            DisplayOrder = 3,
+                            ImageUrl = "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b",
+                            IsDeleted = false,
+                            IsFeatured = true,
+                            MetaDescription = "Trek through spectacular rice terraces and meet local ethnic minorities in Sapa.",
+                            MetaTitle = "Sapa Trekking Tours - Rice Terraces & Mountain Views",
+                            Name = "Sapa",
+                            Slug = "sapa",
+                            StartingPrice = 1500000m,
+                            TotalReviews = 1234,
+                            TourCount = 12
+                        },
+                        new
+                        {
+                            Id = 4,
+                            AverageRating = 4.5m,
+                            Country = "Vietnam",
+                            CreatedAt = new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Tropical paradise with pristine beaches, crystal-clear waters, and vibrant coral reefs.",
+                            DisplayOrder = 4,
+                            ImageUrl = "https://images.unsplash.com/photo-1583037189850-1921ae7c6c22",
+                            IsDeleted = false,
+                            IsFeatured = true,
+                            MetaDescription = "Relax on stunning beaches and explore the natural beauty of Phu Quoc Island.",
+                            MetaTitle = "Phu Quoc Island Tours - Beach Paradise",
+                            Name = "Phu Quoc Island",
+                            Slug = "phu-quoc-island",
+                            StartingPrice = 2000000m,
+                            TotalReviews = 987,
+                            TourCount = 18
+                        },
+                        new
+                        {
+                            Id = 5,
+                            AverageRating = 4.6m,
+                            Country = "Vietnam",
+                            CreatedAt = new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Modern coastal city with beautiful beaches, marble mountains, and the iconic Golden Bridge.",
+                            DisplayOrder = 5,
+                            ImageUrl = "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b",
+                            IsDeleted = false,
+                            IsFeatured = false,
+                            MetaDescription = "Experience the perfect blend of beach, culture, and modern attractions in Da Nang.",
+                            MetaTitle = "Da Nang City Tours - Modern Vietnam",
+                            Name = "Da Nang",
+                            Slug = "da-nang",
+                            StartingPrice = 900000m,
+                            TotalReviews = 1567,
+                            TourCount = 14
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entities.Favorite", b =>
@@ -467,6 +564,58 @@ namespace Infrastructure.Migrations
                         .HasFilter("[UserId] IS NOT NULL");
 
                     b.ToTable("Guides");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Avatar = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
+                            AverageRating = 4.8m,
+                            Bio = "Experienced tour guide with 10 years in the industry. Specialized in cultural and adventure tours across Vietnam.",
+                            CreatedAt = new DateTime(2023, 3, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "john.guide@tourapp.com",
+                            ExperienceYears = 10,
+                            FullName = "John Smith",
+                            IsDeleted = false,
+                            Languages = "English, Vietnamese, French",
+                            PhoneNumber = "+84901234569",
+                            Status = 0,
+                            TotalReviews = 127,
+                            UserId = 3
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Avatar = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d",
+                            AverageRating = 4.9m,
+                            Bio = "Local expert with deep knowledge of Vietnamese history and culture. Passionate about sharing hidden gems.",
+                            CreatedAt = new DateTime(2023, 3, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "nguyen.guide@tourapp.com",
+                            ExperienceYears = 7,
+                            FullName = "Nguyen Van An",
+                            IsDeleted = false,
+                            Languages = "Vietnamese, English, Chinese",
+                            PhoneNumber = "+84901234570",
+                            Status = 0,
+                            TotalReviews = 95,
+                            UserId = 4
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Avatar = "https://images.unsplash.com/photo-1494790108377-be9c29b29330",
+                            AverageRating = 4.7m,
+                            Bio = "Multilingual guide specializing in culinary tours and cooking experiences in Hoi An.",
+                            CreatedAt = new DateTime(2023, 6, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "maria.garcia@tourapp.com",
+                            ExperienceYears = 5,
+                            FullName = "Maria Garcia",
+                            IsDeleted = false,
+                            Languages = "Spanish, English, Vietnamese",
+                            PhoneNumber = "+84901234572",
+                            Status = 0,
+                            TotalReviews = 68
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entities.GuideReview", b =>
@@ -791,6 +940,108 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Tags");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Color = "#FF6B6B",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "🏔️",
+                            IsDeleted = false,
+                            Name = "Adventure",
+                            Slug = "adventure"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Color = "#4ECDC4",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "🏛️",
+                            IsDeleted = false,
+                            Name = "Cultural",
+                            Slug = "cultural"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Color = "#45B7D1",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "🏖️",
+                            IsDeleted = false,
+                            Name = "Beach",
+                            Slug = "beach"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Color = "#96CEB4",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "🌿",
+                            IsDeleted = false,
+                            Name = "Nature",
+                            Slug = "nature"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Color = "#FFEAA7",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "🍜",
+                            IsDeleted = false,
+                            Name = "Food & Cuisine",
+                            Slug = "food-cuisine"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Color = "#DFE6E9",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "📷",
+                            IsDeleted = false,
+                            Name = "Photography",
+                            Slug = "photography"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Color = "#74B9FF",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "🚢",
+                            IsDeleted = false,
+                            Name = "Cruise",
+                            Slug = "cruise"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Color = "#A29BFE",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "🥾",
+                            IsDeleted = false,
+                            Name = "Trekking",
+                            Slug = "trekking"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Color = "#FD79A8",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "👨‍👩‍👧‍👦",
+                            IsDeleted = false,
+                            Name = "Family Friendly",
+                            Slug = "family-friendly"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Color = "#FDCB6E",
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Icon = "💎",
+                            IsDeleted = false,
+                            Name = "Luxury",
+                            Slug = "luxury"
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entities.Tour", b =>
@@ -915,6 +1166,170 @@ namespace Infrastructure.Migrations
                     b.HasIndex("Type");
 
                     b.ToTable("Tours");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            AverageRating = 4.8m,
+                            Category = 13,
+                            CreatedAt = new DateTime(2023, 2, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Experience the magic of Ha Long Bay aboard a luxury cruise ship. Enjoy kayaking, cave exploration, and stunning sunset views over the limestone karsts.",
+                            DestinationId = 1,
+                            Duration = "2 days 1 night",
+                            DurationDays = 2,
+                            IsDeleted = false,
+                            IsFeatured = true,
+                            Location = "Ha Long Bay, Quang Ninh",
+                            MaxGuests = 20,
+                            MetaDescription = "Luxury cruise experience in Ha Long Bay with cave exploration and kayaking.",
+                            MetaTitle = "Ha Long Bay Luxury Cruise 2D1N - Premium Experience",
+                            MinAge = 5,
+                            Name = "Ha Long Bay Luxury Cruise - 2 Days 1 Night",
+                            PhysicalRequirements = "Moderate walking ability required",
+                            Price = 3500000m,
+                            Slug = "ha-long-bay-luxury-cruise-2d1n",
+                            Status = 0,
+                            TotalBookings = 567,
+                            TotalRevenue = 198450000m,
+                            TotalReviews = 234,
+                            Type = 7
+                        },
+                        new
+                        {
+                            Id = 2,
+                            AverageRating = 4.9m,
+                            Category = 8,
+                            CreatedAt = new DateTime(2023, 2, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Discover the culinary delights of Hoi An's ancient town. Sample authentic street food, visit local markets, and learn about Vietnamese cuisine from expert guides.",
+                            DestinationId = 2,
+                            Duration = "4 hours",
+                            DurationDays = 1,
+                            IsDeleted = false,
+                            IsFeatured = true,
+                            Location = "Hoi An Ancient Town",
+                            MaxGuests = 12,
+                            MetaDescription = "Taste the best of Hoi An's street food and local delicacies on this guided walking tour.",
+                            MetaTitle = "Hoi An Food Tour - Authentic Vietnamese Cuisine",
+                            MinAge = 8,
+                            Name = "Hoi An Walking Food Tour",
+                            Price = 850000m,
+                            Slug = "hoi-an-walking-food-tour",
+                            Status = 0,
+                            TotalBookings = 892,
+                            TotalRevenue = 75820000m,
+                            TotalReviews = 389,
+                            Type = 3
+                        },
+                        new
+                        {
+                            Id = 3,
+                            AverageRating = 4.7m,
+                            Category = 14,
+                            CreatedAt = new DateTime(2023, 2, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Trek through stunning rice terraces and visit authentic ethnic minority villages. Experience homestays and learn about traditional mountain life.",
+                            DestinationId = 3,
+                            Difficulty = 1,
+                            Duration = "3 days 2 nights",
+                            DurationDays = 3,
+                            IsDeleted = false,
+                            IsFeatured = true,
+                            Location = "Sapa, Lao Cai",
+                            MaxGuests = 15,
+                            MetaDescription = "Multi-day trekking adventure through Sapa's stunning landscapes and ethnic villages.",
+                            MetaTitle = "Sapa Trekking Tour 3D2N - Rice Terraces & Villages",
+                            MinAge = 12,
+                            Name = "Sapa Trekking Adventure - 3 Days 2 Nights",
+                            PhysicalRequirements = "Good fitness level required. 5-7 hours of trekking daily.",
+                            Price = 4200000m,
+                            Slug = "sapa-trekking-adventure-3d2n",
+                            SpecialRequirements = "Warm clothing, sturdy hiking boots, rain gear",
+                            Status = 0,
+                            TotalBookings = 345,
+                            TotalRevenue = 144900000m,
+                            TotalReviews = 178,
+                            Type = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            AverageRating = 4.6m,
+                            Category = 2,
+                            CreatedAt = new DateTime(2023, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Explore the underwater paradise of Phu Quoc. Snorkel in crystal-clear waters, relax on pristine beaches, and enjoy a fresh seafood lunch.",
+                            DestinationId = 4,
+                            Difficulty = 0,
+                            Duration = "Full day (8 hours)",
+                            DurationDays = 1,
+                            IsDeleted = false,
+                            IsFeatured = true,
+                            Location = "Phu Quoc Island",
+                            MaxGuests = 25,
+                            MetaDescription = "Full-day beach and snorkeling tour exploring Phu Quoc's best underwater spots.",
+                            MetaTitle = "Phu Quoc Snorkeling Tour - Island Paradise",
+                            MinAge = 6,
+                            Name = "Phu Quoc Island Snorkeling & Beach Day",
+                            PhysicalRequirements = "Basic swimming ability recommended",
+                            Price = 1800000m,
+                            Slug = "phu-quoc-snorkeling-beach-day",
+                            Status = 0,
+                            TotalBookings = 789,
+                            TotalRevenue = 142020000m,
+                            TotalReviews = 456,
+                            Type = 4
+                        },
+                        new
+                        {
+                            Id = 5,
+                            AverageRating = 4.5m,
+                            Category = 4,
+                            CreatedAt = new DateTime(2023, 2, 20, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Visit Da Nang's most iconic attractions including the Golden Bridge, Marble Mountains, and Lady Buddha statue. Perfect city tour for first-time visitors.",
+                            DestinationId = 5,
+                            Duration = "Full day (9 hours)",
+                            DurationDays = 1,
+                            IsDeleted = false,
+                            IsFeatured = false,
+                            Location = "Da Nang City",
+                            MaxGuests = 30,
+                            MetaDescription = "Comprehensive city tour covering Da Nang's must-see attractions and landmarks.",
+                            MetaTitle = "Da Nang City Tour - Golden Bridge & Marble Mountains",
+                            MinAge = 3,
+                            Name = "Da Nang Highlights & Golden Bridge",
+                            Price = 1200000m,
+                            Slug = "da-nang-highlights-golden-bridge",
+                            Status = 0,
+                            TotalBookings = 534,
+                            TotalRevenue = 64080000m,
+                            TotalReviews = 267,
+                            Type = 5
+                        },
+                        new
+                        {
+                            Id = 6,
+                            AverageRating = 4.8m,
+                            Category = 1,
+                            CreatedAt = new DateTime(2023, 3, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Description = "Learn the traditional art of lantern making from local artisans. Create your own beautiful lantern to take home as a unique souvenir.",
+                            DestinationId = 2,
+                            Duration = "3 hours",
+                            DurationDays = 1,
+                            IsDeleted = false,
+                            IsFeatured = false,
+                            Location = "Hoi An Ancient Town",
+                            MaxGuests = 10,
+                            MetaDescription = "Hands-on workshop to create your own traditional Vietnamese lantern in Hoi An.",
+                            MetaTitle = "Hoi An Lantern Workshop - Traditional Craft Experience",
+                            MinAge = 7,
+                            Name = "Hoi An Lantern Making Workshop",
+                            Price = 650000m,
+                            Slug = "hoi-an-lantern-making-workshop",
+                            Status = 0,
+                            TotalBookings = 298,
+                            TotalRevenue = 19370000m,
+                            TotalReviews = 145,
+                            Type = 2
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entities.TourExclude", b =>
@@ -1212,6 +1627,106 @@ namespace Infrastructure.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "admin@tourapp.com",
+                            FullName = "System Administrator",
+                            IsDeleted = false,
+                            LastLoginAt = new DateTime(2024, 11, 5, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            MemberSince = new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            PasswordHash = "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f",
+                            PhoneNumber = "+84901234567",
+                            Role = 4,
+                            Status = 0
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CreatedAt = new DateTime(2023, 2, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "manager@tourapp.com",
+                            FullName = "Tour Manager",
+                            IsDeleted = false,
+                            LastLoginAt = new DateTime(2024, 11, 4, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            MemberSince = new DateTime(2023, 2, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            PasswordHash = "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f",
+                            PhoneNumber = "+84901234568",
+                            Role = 3,
+                            Status = 0
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CreatedAt = new DateTime(2023, 3, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "john.guide@tourapp.com",
+                            FullName = "John Smith",
+                            IsDeleted = false,
+                            LastLoginAt = new DateTime(2024, 11, 5, 8, 0, 0, 0, DateTimeKind.Unspecified),
+                            MemberSince = new DateTime(2023, 3, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            PasswordHash = "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f",
+                            PhoneNumber = "+84901234569",
+                            Role = 1,
+                            Status = 0
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2023, 3, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "nguyen.guide@tourapp.com",
+                            FullName = "Nguyen Van An",
+                            IsDeleted = false,
+                            LastLoginAt = new DateTime(2024, 11, 5, 5, 0, 0, 0, DateTimeKind.Unspecified),
+                            MemberSince = new DateTime(2023, 3, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            PasswordHash = "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f",
+                            PhoneNumber = "+84901234570",
+                            Role = 1,
+                            Status = 0
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2024, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "customer1@email.com",
+                            FullName = "David Johnson",
+                            IsDeleted = false,
+                            LastLoginAt = new DateTime(2024, 11, 2, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            MemberSince = new DateTime(2024, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            PasswordHash = "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f",
+                            PhoneNumber = "+1234567890",
+                            Role = 0,
+                            Status = 0
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2024, 2, 20, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "customer2@email.com",
+                            FullName = "Sarah Williams",
+                            IsDeleted = false,
+                            LastLoginAt = new DateTime(2024, 11, 4, 10, 0, 0, 0, DateTimeKind.Unspecified),
+                            MemberSince = new DateTime(2024, 2, 20, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            PasswordHash = "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f",
+                            PhoneNumber = "+1234567891",
+                            Role = 0,
+                            Status = 0
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreatedAt = new DateTime(2024, 3, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            Email = "customer3@email.com",
+                            FullName = "Tran Thi Mai",
+                            IsDeleted = false,
+                            LastLoginAt = new DateTime(2024, 11, 5, 4, 0, 0, 0, DateTimeKind.Unspecified),
+                            MemberSince = new DateTime(2024, 3, 10, 0, 0, 0, 0, DateTimeKind.Unspecified),
+                            PasswordHash = "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f",
+                            PhoneNumber = "+84901234571",
+                            Role = 0,
+                            Status = 0
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entities.AuditLog", b =>

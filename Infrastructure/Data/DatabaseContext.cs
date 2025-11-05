@@ -502,8 +502,12 @@ namespace Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.SetNull);
-
             });
+
+            // ===================================
+            // SEED DATA
+            // ===================================
+            DatabaseSeeder.SeedData(modelBuilder);
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -543,4 +547,3 @@ namespace Infrastructure.Data
         }
     }
 }
-

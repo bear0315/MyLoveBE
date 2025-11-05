@@ -1,11 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
+
+#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
 namespace Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class pr : Migration
+    public partial class SeedDatabase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -647,6 +650,76 @@ namespace Infrastructure.Migrations
                         principalTable: "Reviews",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.InsertData(
+                table: "Destinations",
+                columns: new[] { "Id", "AverageRating", "Country", "CreatedAt", "Description", "DisplayOrder", "ImageUrl", "IsDeleted", "IsFeatured", "MetaDescription", "MetaTitle", "Name", "Slug", "StartingPrice", "TotalReviews", "TourCount", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, 4.7m, "Vietnam", new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "A UNESCO World Heritage Site featuring thousands of limestone karsts and islands in emerald waters.", 1, "https://images.unsplash.com/photo-1528127269322-539801943592", false, true, "Explore the breathtaking Ha Long Bay with luxury cruises and adventure tours.", "Ha Long Bay Tours - UNESCO Heritage Site", "Ha Long Bay", "ha-long-bay", 1200000m, 2145, 15, null },
+                    { 2, 4.8m, "Vietnam", new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "A well-preserved ancient town showcasing a blend of Vietnamese, Chinese, Japanese, and European architecture.", 2, "https://images.unsplash.com/photo-1583417319070-4a69db38a482", false, true, "Discover the charming streets of Hoi An, famous for lanterns, tailors, and cultural heritage.", "Hoi An Tours - Ancient Town & Lantern Festival", "Hoi An Ancient Town", "hoi-an-ancient-town", 800000m, 1890, 20, null },
+                    { 3, 4.6m, "Vietnam", new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "Mountain town known for stunning rice terraces, ethnic minority villages, and trekking adventures.", 3, "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b", false, true, "Trek through spectacular rice terraces and meet local ethnic minorities in Sapa.", "Sapa Trekking Tours - Rice Terraces & Mountain Views", "Sapa", "sapa", 1500000m, 1234, 12, null },
+                    { 4, 4.5m, "Vietnam", new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "Tropical paradise with pristine beaches, crystal-clear waters, and vibrant coral reefs.", 4, "https://images.unsplash.com/photo-1583037189850-1921ae7c6c22", false, true, "Relax on stunning beaches and explore the natural beauty of Phu Quoc Island.", "Phu Quoc Island Tours - Beach Paradise", "Phu Quoc Island", "phu-quoc-island", 2000000m, 987, 18, null },
+                    { 5, 4.6m, "Vietnam", new DateTime(2023, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "Modern coastal city with beautiful beaches, marble mountains, and the iconic Golden Bridge.", 5, "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b", false, false, "Experience the perfect blend of beach, culture, and modern attractions in Da Nang.", "Da Nang City Tours - Modern Vietnam", "Da Nang", "da-nang", 900000m, 1567, 14, null }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Guides",
+                columns: new[] { "Id", "Avatar", "AverageRating", "Bio", "CreatedAt", "Email", "ExperienceYears", "FullName", "IsDeleted", "Languages", "PhoneNumber", "Status", "TotalReviews", "UpdatedAt", "UserId" },
+                values: new object[] { 3, "https://images.unsplash.com/photo-1494790108377-be9c29b29330", 4.7m, "Multilingual guide specializing in culinary tours and cooking experiences in Hoi An.", new DateTime(2023, 6, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "maria.garcia@tourapp.com", 5, "Maria Garcia", false, "Spanish, English, Vietnamese", "+84901234572", 0, 68, null, null });
+
+            migrationBuilder.InsertData(
+                table: "Tags",
+                columns: new[] { "Id", "Color", "CreatedAt", "Icon", "IsDeleted", "Name", "Slug", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, "#FF6B6B", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "🏔️", false, "Adventure", "adventure", null },
+                    { 2, "#4ECDC4", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "🏛️", false, "Cultural", "cultural", null },
+                    { 3, "#45B7D1", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "🏖️", false, "Beach", "beach", null },
+                    { 4, "#96CEB4", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "🌿", false, "Nature", "nature", null },
+                    { 5, "#FFEAA7", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "🍜", false, "Food & Cuisine", "food-cuisine", null },
+                    { 6, "#DFE6E9", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "📷", false, "Photography", "photography", null },
+                    { 7, "#74B9FF", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "🚢", false, "Cruise", "cruise", null },
+                    { 8, "#A29BFE", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "🥾", false, "Trekking", "trekking", null },
+                    { 9, "#FD79A8", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "👨‍👩‍👧‍👦", false, "Family Friendly", "family-friendly", null },
+                    { 10, "#FDCB6E", new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "💎", false, "Luxury", "luxury", null }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Users",
+                columns: new[] { "Id", "Avatar", "CreatedAt", "Email", "FullName", "IsDeleted", "LastLoginAt", "MemberSince", "PasswordHash", "PhoneNumber", "Role", "Status", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, null, new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "admin@tourapp.com", "System Administrator", false, new DateTime(2024, 11, 5, 10, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2023, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f", "+84901234567", 4, 0, null },
+                    { 2, null, new DateTime(2023, 2, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "manager@tourapp.com", "Tour Manager", false, new DateTime(2024, 11, 4, 10, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2023, 2, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f", "+84901234568", 3, 0, null },
+                    { 3, null, new DateTime(2023, 3, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "john.guide@tourapp.com", "John Smith", false, new DateTime(2024, 11, 5, 8, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2023, 3, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f", "+84901234569", 1, 0, null },
+                    { 4, null, new DateTime(2023, 3, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "nguyen.guide@tourapp.com", "Nguyen Van An", false, new DateTime(2024, 11, 5, 5, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2023, 3, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f", "+84901234570", 1, 0, null },
+                    { 5, null, new DateTime(2024, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "customer1@email.com", "David Johnson", false, new DateTime(2024, 11, 2, 10, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2024, 1, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f", "+1234567890", 0, 0, null },
+                    { 6, null, new DateTime(2024, 2, 20, 0, 0, 0, 0, DateTimeKind.Unspecified), "customer2@email.com", "Sarah Williams", false, new DateTime(2024, 11, 4, 10, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2024, 2, 20, 0, 0, 0, 0, DateTimeKind.Unspecified), "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f", "+1234567891", 0, 0, null },
+                    { 7, null, new DateTime(2024, 3, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), "customer3@email.com", "Tran Thi Mai", false, new DateTime(2024, 11, 5, 4, 0, 0, 0, DateTimeKind.Unspecified), new DateTime(2024, 3, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f", "+84901234571", 0, 0, null }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Guides",
+                columns: new[] { "Id", "Avatar", "AverageRating", "Bio", "CreatedAt", "Email", "ExperienceYears", "FullName", "IsDeleted", "Languages", "PhoneNumber", "Status", "TotalReviews", "UpdatedAt", "UserId" },
+                values: new object[,]
+                {
+                    { 1, "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d", 4.8m, "Experienced tour guide with 10 years in the industry. Specialized in cultural and adventure tours across Vietnam.", new DateTime(2023, 3, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "john.guide@tourapp.com", 10, "John Smith", false, "English, Vietnamese, French", "+84901234569", 0, 127, null, 3 },
+                    { 2, "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d", 4.9m, "Local expert with deep knowledge of Vietnamese history and culture. Passionate about sharing hidden gems.", new DateTime(2023, 3, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "nguyen.guide@tourapp.com", 7, "Nguyen Van An", false, "Vietnamese, English, Chinese", "+84901234570", 0, 95, null, 4 }
+                });
+
+            migrationBuilder.InsertData(
+                table: "Tours",
+                columns: new[] { "Id", "AverageRating", "Category", "CreatedAt", "Description", "DestinationId", "Difficulty", "Duration", "DurationDays", "IsDeleted", "IsFeatured", "Location", "MaxAge", "MaxGuests", "MetaDescription", "MetaTitle", "MinAge", "Name", "PhysicalRequirements", "Price", "Slug", "SpecialRequirements", "Status", "TotalBookings", "TotalRevenue", "TotalReviews", "Type", "UpdatedAt" },
+                values: new object[,]
+                {
+                    { 1, 4.8m, 13, new DateTime(2023, 2, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "Experience the magic of Ha Long Bay aboard a luxury cruise ship. Enjoy kayaking, cave exploration, and stunning sunset views over the limestone karsts.", 1, null, "2 days 1 night", 2, false, true, "Ha Long Bay, Quang Ninh", null, 20, "Luxury cruise experience in Ha Long Bay with cave exploration and kayaking.", "Ha Long Bay Luxury Cruise 2D1N - Premium Experience", 5, "Ha Long Bay Luxury Cruise - 2 Days 1 Night", "Moderate walking ability required", 3500000m, "ha-long-bay-luxury-cruise-2d1n", null, 0, 567, 198450000m, 234, 7, null },
+                    { 2, 4.9m, 8, new DateTime(2023, 2, 5, 0, 0, 0, 0, DateTimeKind.Unspecified), "Discover the culinary delights of Hoi An's ancient town. Sample authentic street food, visit local markets, and learn about Vietnamese cuisine from expert guides.", 2, null, "4 hours", 1, false, true, "Hoi An Ancient Town", null, 12, "Taste the best of Hoi An's street food and local delicacies on this guided walking tour.", "Hoi An Food Tour - Authentic Vietnamese Cuisine", 8, "Hoi An Walking Food Tour", null, 850000m, "hoi-an-walking-food-tour", null, 0, 892, 75820000m, 389, 3, null },
+                    { 3, 4.7m, 14, new DateTime(2023, 2, 10, 0, 0, 0, 0, DateTimeKind.Unspecified), "Trek through stunning rice terraces and visit authentic ethnic minority villages. Experience homestays and learn about traditional mountain life.", 3, 1, "3 days 2 nights", 3, false, true, "Sapa, Lao Cai", null, 15, "Multi-day trekking adventure through Sapa's stunning landscapes and ethnic villages.", "Sapa Trekking Tour 3D2N - Rice Terraces & Villages", 12, "Sapa Trekking Adventure - 3 Days 2 Nights", "Good fitness level required. 5-7 hours of trekking daily.", 4200000m, "sapa-trekking-adventure-3d2n", "Warm clothing, sturdy hiking boots, rain gear", 0, 345, 144900000m, 178, 1, null },
+                    { 4, 4.6m, 2, new DateTime(2023, 2, 15, 0, 0, 0, 0, DateTimeKind.Unspecified), "Explore the underwater paradise of Phu Quoc. Snorkel in crystal-clear waters, relax on pristine beaches, and enjoy a fresh seafood lunch.", 4, 0, "Full day (8 hours)", 1, false, true, "Phu Quoc Island", null, 25, "Full-day beach and snorkeling tour exploring Phu Quoc's best underwater spots.", "Phu Quoc Snorkeling Tour - Island Paradise", 6, "Phu Quoc Island Snorkeling & Beach Day", "Basic swimming ability recommended", 1800000m, "phu-quoc-snorkeling-beach-day", null, 0, 789, 142020000m, 456, 4, null },
+                    { 5, 4.5m, 4, new DateTime(2023, 2, 20, 0, 0, 0, 0, DateTimeKind.Unspecified), "Visit Da Nang's most iconic attractions including the Golden Bridge, Marble Mountains, and Lady Buddha statue. Perfect city tour for first-time visitors.", 5, null, "Full day (9 hours)", 1, false, false, "Da Nang City", null, 30, "Comprehensive city tour covering Da Nang's must-see attractions and landmarks.", "Da Nang City Tour - Golden Bridge & Marble Mountains", 3, "Da Nang Highlights & Golden Bridge", null, 1200000m, "da-nang-highlights-golden-bridge", null, 0, 534, 64080000m, 267, 5, null },
+                    { 6, 4.8m, 1, new DateTime(2023, 3, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), "Learn the traditional art of lantern making from local artisans. Create your own beautiful lantern to take home as a unique souvenir.", 2, null, "3 hours", 1, false, false, "Hoi An Ancient Town", null, 10, "Hands-on workshop to create your own traditional Vietnamese lantern in Hoi An.", "Hoi An Lantern Workshop - Traditional Craft Experience", 7, "Hoi An Lantern Making Workshop", null, 650000m, "hoi-an-lantern-making-workshop", null, 0, 298, 19370000m, 145, 2, null }
                 });
 
             migrationBuilder.CreateIndex(
