@@ -37,8 +37,8 @@ namespace Domain.Entities
         public DateTime? CancelledAt { get; set; }
         public string? CancellationReason { get; set; }
         public decimal? RefundAmount { get; set; }
-
-        // Navigation properties
+        
+        // noi bang 
         public User User { get; set; } = null!;
         public Tour Tour { get; set; } = null!;
         public Guide? Guide { get; set; }

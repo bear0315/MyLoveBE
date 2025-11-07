@@ -17,8 +17,7 @@ namespace Domain.Entities
         public string? NewValues { get; set; }
         public string? IpAddress { get; set; }
         public string? UserAgent { get; set; }
-
-        // Navigation property
+        // noi den user
         public User? User { get; set; }
     }
 }

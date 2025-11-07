@@ -43,7 +43,6 @@ namespace Application.Services
         {
             try
             {
-                // Find user by email
                 var user = await _userRepository.GetByEmailAsync(request.Email);
                 if (user == null)
                 {
@@ -52,7 +51,6 @@ namespace Application.Services
                     return AuthMapper.ToFailedLoginResponse("Invalid email or password");
                 }
 
-                // Check if user is active
                 if (user.Status != UserStatus.Active)
                 {
                     await LogAuditAsync(user.Id, "LOGIN_BLOCKED", "User", user.Id,
@@ -60,7 +58,6 @@ namespace Application.Services
                     return AuthMapper.ToFailedLoginResponse("Account is inactive or blocked");
                 }
 
-                // Verify password
                 if (!VerifyPassword(request.Password, user.PasswordHash))
                 {
                     await LogAuditAsync(user.Id, "LOGIN_FAILED", "User", user.Id,
@@ -68,7 +65,6 @@ namespace Application.Services
                     return AuthMapper.ToFailedLoginResponse("Invalid email or password");
                 }
 
-                // ✅ SỬA: Gọi IJwtService thay vì hàm private
                 var accessToken = _jwtService.GenerateAccessToken(user);
                 var refreshToken = _jwtService.GenerateRefreshToken();
 
@@ -77,7 +73,6 @@ namespace Application.Services
                 var refreshTokenExpiry = DateTime.UtcNow.AddDays(
                     int.Parse(_configuration["JwtSettings:RefreshTokenExpirationDays"] ?? "7"));
 
-                // Save refresh token
                 var refreshTokenEntity = new RefreshToken
                 {
                     UserId = user.Id,
@@ -88,11 +83,9 @@ namespace Application.Services
                 };
                 await _refreshTokenRepository.CreateAsync(refreshTokenEntity);
 
-                // Update last login
                 user.LastLoginAt = DateTime.UtcNow;
                 await _userRepository.UpdateAsync(user);
 
-                // Log successful login
                 await LogAuditAsync(user.Id, "LOGIN_SUCCESS", "User", user.Id,
                     $"Successful login from device: {request.DeviceInfo}", request.IpAddress);
 
@@ -114,14 +107,12 @@ namespace Application.Services
         {
             try
             {
-                // Find refresh token
                 var refreshTokenEntity = await _refreshTokenRepository.GetByTokenAsync(request.RefreshToken);
                 if (refreshTokenEntity == null)
                 {
                     return AuthMapper.ToFailedLoginResponse("Invalid refresh token");
                 }
 
-                // Validate token
                 if (!refreshTokenEntity.IsActive)
                 {
                     await LogAuditAsync(refreshTokenEntity.UserId, "TOKEN_REFRESH_FAILED",
@@ -136,7 +127,6 @@ namespace Application.Services
                     return AuthMapper.ToFailedLoginResponse("Account is inactive or blocked");
                 }
 
-                // ✅ SỬA: Gọi IJwtService
                 var newAccessToken = _jwtService.GenerateAccessToken(user);
                 var newRefreshToken = _jwtService.GenerateRefreshToken();
 
@@ -145,13 +135,11 @@ namespace Application.Services
                 var refreshTokenExpiry = DateTime.UtcNow.AddDays(
                     int.Parse(_configuration["JwtSettings:RefreshTokenExpirationDays"] ?? "7"));
 
-                // Revoke old token
                 refreshTokenEntity.IsRevoked = true;
                 refreshTokenEntity.RevokedAt = DateTime.UtcNow;
                 refreshTokenEntity.ReplacedByToken = newRefreshToken;
                 await _refreshTokenRepository.UpdateAsync(refreshTokenEntity);
 
-                // Save new refresh token
                 var newRefreshTokenEntity = new RefreshToken
                 {
                     UserId = user.Id,
@@ -162,7 +150,6 @@ namespace Application.Services
                 };
                 await _refreshTokenRepository.CreateAsync(newRefreshTokenEntity);
 
-                // Log token refresh
                 await LogAuditAsync(user.Id, "TOKEN_REFRESHED", "RefreshToken",
                     newRefreshTokenEntity.Id, "Token successfully refreshed", request.IpAddress);
 
@@ -185,7 +172,6 @@ namespace Application.Services
         {
             try
             {
-                // Revoke all active tokens for user
                 var result = await _refreshTokenRepository.RevokeAllUserTokensAsync(userId);
 
                 if (result)
@@ -254,7 +240,6 @@ namespace Application.Services
             }
             catch
             {
-                // Silently fail audit logging
             }
         }
 

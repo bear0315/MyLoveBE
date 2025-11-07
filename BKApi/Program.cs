@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Hosting.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ==================== DATABASE ====================
 builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("BK"),
@@ -20,16 +19,13 @@ builder.Services.AddDbContext<DatabaseContext>(options =>
     )
 );
 
-// ==================== REPOSITORIES ====================
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 
-// ==================== SERVICES ====================
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 
-// ==================== JWT AUTHENTICATION ====================
 var jwtSettings = builder.Configuration.GetSection("JWT");
 var secretKey = jwtSettings["SecretKey"]
     ?? throw new InvalidOperationException("JWT SecretKey not configured in appsettings.json");
@@ -43,7 +39,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false; // Set true in production
+    options.RequireHttpsMetadata = false; 
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -98,7 +94,6 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// ==================== CORS ====================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -109,7 +104,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ==================== CONTROLLERS ====================
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -117,7 +111,6 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.WriteIndented = true;
     });
 
-// ==================== SWAGGER ====================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -133,7 +126,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 
-    // JWT Authentication in Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token.",
@@ -164,7 +156,6 @@ var app = builder.Build();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-// ==================== MIDDLEWARE PIPELINE ====================
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -221,32 +212,6 @@ app.MapGet("/health", () => Results.Ok(new
 .WithName("HealthCheck")
 .WithTags("Health");
 
-// 8. Root endpoint
 app.MapGet("/", () => Results.Redirect("/swagger"))
     .ExcludeFromDescription();
-
-app.Lifetime.ApplicationStarted.Register(() =>
-{
-    var addresses = app.Services.GetRequiredService<IServer>()
-        .Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>()?
-        .Addresses;
-
-    logger.LogInformation("========================================");
-    logger.LogInformation("Application Started Successfully!");
-    logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
-    logger.LogInformation("========================================");
-
-    if (addresses != null)
-    {
-        foreach (var address in addresses)
-        {
-            logger.LogInformation("Listening on: {Address}", address);
-            logger.LogInformation("Swagger UI: {Address}/swagger", address);
-            logger.LogInformation("Health Check: {Address}/health", address);
-        }
-    }
-
-    logger.LogInformation("========================================");
-});
-
 app.Run();

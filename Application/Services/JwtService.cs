@@ -37,7 +37,6 @@ namespace Application.Services
         {
             try
             {
-                // ✅ Validate user object
                 if (user == null)
                     throw new ArgumentNullException(nameof(user), "User cannot be null");
 
@@ -68,7 +67,6 @@ namespace Application.Services
                     new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
                 };
 
-                // Add phone number if available
                 if (!string.IsNullOrEmpty(user.PhoneNumber))
                 {
                     claims.Add(new Claim(ClaimTypes.MobilePhone, user.PhoneNumber));
@@ -132,7 +130,6 @@ namespace Application.Services
 
                 var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
 
-                // Verify it's a JWT token
                 if (validatedToken is not JwtSecurityToken jwtToken ||
                     !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
                 {
@@ -143,12 +140,10 @@ namespace Application.Services
             }
             catch (SecurityTokenExpiredException)
             {
-                // Token expired
                 return null;
             }
             catch (Exception)
             {
-                // Invalid token
                 return null;
             }
         }

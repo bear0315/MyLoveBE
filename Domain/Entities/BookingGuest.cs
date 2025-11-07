@@ -17,7 +17,7 @@
             public string? Nationality { get; set; }
             public string? SpecialRequirements { get; set; }
 
-            // Navigation property
+            // noi bang 
             public Booking Booking { get; set; } = null!;
         }
     }
