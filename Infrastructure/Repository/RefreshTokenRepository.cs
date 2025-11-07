@@ -75,18 +75,37 @@ namespace Infrastructure.Repository
 
         public async Task<bool> RevokeAllUserTokensAsync(int userId)
         {
-            var tokens = await GetActiveTokensByUserIdAsync(userId);
-            if (!tokens.Any()) return false;
-
-            foreach (var token in tokens)
+            try
             {
-                token.IsRevoked = true;
-                token.RevokedAt = DateTime.UtcNow;
-                token.UpdatedAt = DateTime.UtcNow;
-            }
+                var tokens = await _context.RefreshTokens
+                    .Where(r => !r.IsDeleted
+                        && r.UserId == userId
+                        && !r.IsRevoked
+                        && r.ExpiresAt > DateTime.UtcNow)
+                    .ToListAsync();
 
-            await _context.SaveChangesAsync();
-            return true;
+                if (!tokens.Any())
+                {
+                    Console.WriteLine($" No active tokens found for userId {userId} - logout successful");
+                    return true;
+                }
+
+                foreach (var token in tokens)
+                {
+                    token.IsRevoked = true;
+                    token.RevokedAt = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine($" Revoked {tokens.Count} token(s) for userId {userId}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($" Error in RevokeAllUserTokensAsync: {ex.Message}");
+                return false;
+            }
         }
 
         public async Task<bool> DeleteExpiredTokensAsync()

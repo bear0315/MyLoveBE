@@ -24,6 +24,10 @@ namespace Infrastructure.Repository
             return await _context.Users
                 .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
         }
+        public IQueryable<User> GetAll()
+        {
+            return _context.Users.Where(u => !u.IsDeleted).AsQueryable();
+        }
 
         public async Task<User?> GetByEmailAsync(string email)
         {

@@ -69,9 +69,9 @@ namespace Application.Services
                 var refreshToken = _jwtService.GenerateRefreshToken();
 
                 var accessTokenExpiry = DateTime.UtcNow.AddMinutes(
-                    int.Parse(_configuration["JwtSettings:AccessTokenExpirationMinutes"] ?? "60"));
+                    int.Parse(_configuration["JWT:AccessTokenExpirationMinutes"] ?? "60"));
                 var refreshTokenExpiry = DateTime.UtcNow.AddDays(
-                    int.Parse(_configuration["JwtSettings:RefreshTokenExpirationDays"] ?? "7"));
+                    int.Parse(_configuration["JWT:RefreshTokenExpirationDays"] ?? "7"));
 
                 var refreshTokenEntity = new RefreshToken
                 {
@@ -131,9 +131,9 @@ namespace Application.Services
                 var newRefreshToken = _jwtService.GenerateRefreshToken();
 
                 var accessTokenExpiry = DateTime.UtcNow.AddMinutes(
-                    int.Parse(_configuration["JwtSettings:AccessTokenExpirationMinutes"] ?? "60"));
+                    int.Parse(_configuration["JWT:AccessTokenExpirationMinutes"] ?? "60"));
                 var refreshTokenExpiry = DateTime.UtcNow.AddDays(
-                    int.Parse(_configuration["JwtSettings:RefreshTokenExpirationDays"] ?? "7"));
+                    int.Parse(_configuration["JWT:RefreshTokenExpirationDays"] ?? "7"));
 
                 refreshTokenEntity.IsRevoked = true;
                 refreshTokenEntity.RevokedAt = DateTime.UtcNow;

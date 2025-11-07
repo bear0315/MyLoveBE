@@ -5,11 +5,9 @@ using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.Services
 {
@@ -31,6 +29,12 @@ namespace Application.Services
             _audience = configuration["JWT:Audience"]
                 ?? throw new InvalidOperationException("JWT Audience not configured in appsettings.json");
             _accessTokenExpiryMinutes = int.Parse(configuration["JWT:AccessTokenExpirationMinutes"] ?? "60");
+
+            Console.WriteLine($"=== JWT Configuration Loaded ===");
+            Console.WriteLine($"Issuer: {_issuer}");
+            Console.WriteLine($"Audience: {_audience}");
+            Console.WriteLine($"Secret Key Length: {_secret.Length}");
+            Console.WriteLine($"Access Token Expiry: {_accessTokenExpiryMinutes} minutes");
         }
 
         public string GenerateAccessToken(User user)
@@ -40,28 +44,25 @@ namespace Application.Services
                 if (user == null)
                     throw new ArgumentNullException(nameof(user), "User cannot be null");
 
-                Console.WriteLine($"=== DEBUG GenerateAccessToken ===");
+                Console.WriteLine($"\n=== Generating Access Token ===");
                 Console.WriteLine($"User ID: {user.Id}");
                 Console.WriteLine($"Email: {user.Email ?? "NULL"}");
                 Console.WriteLine($"FullName: {user.FullName ?? "NULL"}");
                 Console.WriteLine($"Role: {user.Role}");
                 Console.WriteLine($"Status: {user.Status}");
-                Console.WriteLine($"PhoneNumber: {user.PhoneNumber ?? "NULL"}");
 
                 if (string.IsNullOrEmpty(user.Email))
                     throw new ArgumentException("User email is required", nameof(user));
 
-                Console.WriteLine("Creating security key...");
                 var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_secret));
                 var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
-                Console.WriteLine("Creating claims...");
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                     new Claim(ClaimTypes.Email, user.Email),
                     new Claim(ClaimTypes.Name, user.FullName ?? user.Email),
-                    new Claim(ClaimTypes.Role, user.Role.ToString()),
+                    new Claim(ClaimTypes.Role, user.Role.ToString()), 
                     new Claim("Status", user.Status.ToString()),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
@@ -72,7 +73,12 @@ namespace Application.Services
                     claims.Add(new Claim(ClaimTypes.MobilePhone, user.PhoneNumber));
                 }
 
-                Console.WriteLine("Creating JWT token...");
+                Console.WriteLine("Claims added:");
+                foreach (var claim in claims)
+                {
+                    Console.WriteLine($"  - {claim.Type}: {claim.Value}");
+                }
+
                 var token = new JwtSecurityToken(
                     issuer: _issuer,
                     audience: _audience,
@@ -82,15 +88,14 @@ namespace Application.Services
                     signingCredentials: credentials
                 );
 
-                Console.WriteLine("Writing token...");
                 var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-                Console.WriteLine("Token generated successfully!");
+                Console.WriteLine($" Token generated successfully! (Length: {tokenString.Length})\n");
 
                 return tokenString;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"ERROR in GenerateAccessToken: {ex.GetType().Name}");
+                Console.WriteLine($" ERROR in GenerateAccessToken: {ex.GetType().Name}");
                 Console.WriteLine($"Message: {ex.Message}");
                 Console.WriteLine($"StackTrace: {ex.StackTrace}");
                 if (ex.InnerException != null)
@@ -125,7 +130,9 @@ namespace Application.Services
                     ValidateAudience = true,
                     ValidAudience = _audience,
                     ValidateLifetime = true,
-                    ClockSkew = TimeSpan.Zero
+                    ClockSkew = TimeSpan.Zero,
+                    RoleClaimType = ClaimTypes.Role,
+                    NameClaimType = ClaimTypes.Name
                 };
 
                 var principal = tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
@@ -133,17 +140,21 @@ namespace Application.Services
                 if (validatedToken is not JwtSecurityToken jwtToken ||
                     !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
                 {
+                    Console.WriteLine(" Token validation failed: Invalid algorithm");
                     return null;
                 }
 
+                Console.WriteLine(" Token validated successfully in JwtService");
                 return principal;
             }
             catch (SecurityTokenExpiredException)
             {
+                Console.WriteLine("❌ Token expired");
                 return null;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine($" Token validation error: {ex.Message}");
                 return null;
             }
         }

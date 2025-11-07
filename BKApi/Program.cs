@@ -8,7 +8,7 @@ using Application.Interfaces;
 using Application.Services;
 using Domain.Interfaces;
 using Infrastructure.Repository;
-using Microsoft.AspNetCore.Hosting.Server;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +25,7 @@ builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var jwtSettings = builder.Configuration.GetSection("JWT");
 var secretKey = jwtSettings["SecretKey"]
@@ -39,7 +40,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false; 
+    options.RequireHttpsMetadata = false;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -49,21 +50,41 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero,
+        RoleClaimType = ClaimTypes.Role,
+        NameClaimType = ClaimTypes.Name
     };
 
     options.Events = new JwtBearerEvents
     {
         OnAuthenticationFailed = context =>
         {
+            Console.WriteLine($" Authentication Failed: {context.Exception.Message}");
             if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
             {
                 context.Response.Headers.Append("Token-Expired", "true");
             }
             return Task.CompletedTask;
         },
+        OnTokenValidated = context =>
+        {
+            var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var email = context.Principal?.FindFirst(ClaimTypes.Email)?.Value;
+            var role = context.Principal?.FindFirst(ClaimTypes.Role)?.Value;
+            var name = context.Principal?.FindFirst(ClaimTypes.Name)?.Value;
+
+            Console.WriteLine($" Token Validated Successfully:");
+            Console.WriteLine($"   - UserId: {userId}");
+            Console.WriteLine($"   - Email: {email}");
+            Console.WriteLine($"   - Name: {name}");
+            Console.WriteLine($"   - Role: {role}");
+            Console.WriteLine($"   - IsInRole(Admin): {context.Principal?.IsInRole("Admin")}");
+
+            return Task.CompletedTask;
+        },
         OnChallenge = context =>
         {
+            Console.WriteLine($"⚠️ OnChallenge: {context.Error} - {context.ErrorDescription}");
             context.HandleResponse();
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             context.Response.ContentType = "application/json";
@@ -78,6 +99,11 @@ builder.Services.AddAuthentication(options =>
         },
         OnForbidden = context =>
         {
+            Console.WriteLine($" OnForbidden - User tried to access forbidden resource");
+            var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var role = context.Principal?.FindFirst(ClaimTypes.Role)?.Value;
+            Console.WriteLine($"   - UserId: {userId}, Role: {role}");
+
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
             context.Response.ContentType = "application/json";
 
@@ -92,7 +118,17 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy =>
+        policy.RequireRole("Admin"));
+
+    options.AddPolicy("ManagerAndAbove", policy =>
+        policy.RequireRole("Admin", "Manager"));
+
+    options.AddPolicy("StaffAndAbove", policy =>
+        policy.RequireRole("Admin", "Manager", "Staff"));
+});
 
 builder.Services.AddCors(options =>
 {
@@ -128,11 +164,11 @@ builder.Services.AddSwaggerGen(c =>
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Enter 'Bearer' [space] and then your token.",
+        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
+        Type = SecuritySchemeType.Http,  
+        Scheme = "bearer", 
         BearerFormat = "JWT"
     });
 
@@ -156,12 +192,11 @@ var app = builder.Build();
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Travel Booking API v1");
-    c.RoutePrefix = "swagger"; 
+    c.RoutePrefix = "swagger";
     c.DocumentTitle = "Travel Booking API Documentation";
 });
 
@@ -214,4 +249,5 @@ app.MapGet("/health", () => Results.Ok(new
 
 app.MapGet("/", () => Results.Redirect("/swagger"))
     .ExcludeFromDescription();
+
 app.Run();
