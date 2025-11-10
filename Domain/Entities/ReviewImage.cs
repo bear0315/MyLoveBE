@@ -12,7 +12,6 @@ namespace Domain.Entities
         public int ReviewId { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
 
-        // Navigation property
         public Review Review { get; set; } = null!;
     }
 }
