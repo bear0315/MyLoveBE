@@ -9,16 +9,19 @@ using Application.Services;
 using Domain.Interfaces;
 using Infrastructure.Repository;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Hosting.Server;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ==================== DATABASE ====================
 builder.Services.AddDbContext<DatabaseContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("BK"),
         b => b.MigrationsAssembly("Infrastructure")
     )
 );
-// Repisitory 
+
+// ==================== REPOSITORIES ====================
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
@@ -35,15 +38,22 @@ builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IDestinationRepository, DestinationRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IReviewImageRepository, ReviewImageRepository>();
-// Service
+// Booking Repositories
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IBookingGuestRepository, BookingGuestRepository>();
+
+// ==================== SERVICES ====================
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<ITourService, TourService>();    
+builder.Services.AddScoped<ITourService, TourService>();
 builder.Services.AddScoped<IDestinationService, DestinationService>();
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IFavoriteService, FavoriteService>();
+// Booking & Payment Services
+builder.Services.AddScoped<IBookingService, BookingService>();
+builder.Services.AddScoped<IVnPayService, VnPayService>();
 
 var jwtSettings = builder.Configuration.GetSection("JWT");
 var secretKey = jwtSettings["SecretKey"]
@@ -117,7 +127,7 @@ builder.Services.AddAuthentication(options =>
         },
         OnForbidden = context =>
         {
-            Console.WriteLine($" OnForbidden - User tried to access forbidden resource");
+            Console.WriteLine($"🚫 OnForbidden - User tried to access forbidden resource");
             var userId = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var role = context.Principal?.FindFirst(ClaimTypes.Role)?.Value;
             Console.WriteLine($"   - UserId: {userId}, Role: {role}");
@@ -172,7 +182,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "Travel Booking API",
         Version = "v1",
-        Description = "API for Travel Booking System with JWT Authentication",
+        Description = "API for Travel Booking System with JWT Authentication & VNPay Payment Integration",
         Contact = new OpenApiContact
         {
             Name = "Travel Booking Team",
@@ -185,8 +195,8 @@ builder.Services.AddSwaggerGen(c =>
         Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http,  
-        Scheme = "bearer", 
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT"
     });
 
@@ -254,7 +264,41 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 app.MapGet("/", () => Results.Redirect("/swagger"))
     .ExcludeFromDescription();
+
+
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var addresses = app.Services.GetRequiredService<IServer>()
+        .Features.Get<Microsoft.AspNetCore.Hosting.Server.Features.IServerAddressesFeature>()?
+        .Addresses;
+
+    logger.LogInformation("========================================");
+    logger.LogInformation("Application Started Successfully!");
+    logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
+    logger.LogInformation("========================================");
+
+    if (addresses != null)
+    {
+        foreach (var address in addresses)
+        {
+            logger.LogInformation(" Listening on: {Address}", address);
+            logger.LogInformation(" Swagger UI: {Address}/swagger", address);
+            logger.LogInformation(" Health Check: {Address}/health", address);
+        }
+    }
+
+    // Log VNPay Configuration
+    var vnpayTmnCode = app.Configuration["VnPay:TmnCode"];
+    var vnpayUrl = app.Configuration["VnPay:Url"];
+    logger.LogInformation("========================================");
+    logger.LogInformation("💳 VNPay Configuration:");
+    logger.LogInformation("   TmnCode: {TmnCode}", vnpayTmnCode ?? "Not Configured");
+    logger.LogInformation("   URL: {Url}", vnpayUrl ?? "Not Configured");
+    logger.LogInformation("   Status: {Status}", !string.IsNullOrEmpty(vnpayTmnCode) ? "Configured" : " Not Configured");
+    logger.LogInformation("========================================");
+});
 
 app.Run();
