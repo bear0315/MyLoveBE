@@ -15,15 +15,19 @@ namespace BKApi.Controllers
         private readonly IVnPayService _vnPayService;
         private readonly IBookingService _bookingService;
         private readonly ILogger<PaymentController> _logger;
+        private readonly IConfiguration _configuration;
+
 
         public PaymentController(
             IVnPayService vnPayService,
             IBookingService bookingService,
-            ILogger<PaymentController> logger)
+            ILogger<PaymentController> logger,
+            IConfiguration configuration)
         {
             _vnPayService = vnPayService;
             _bookingService = bookingService;
             _logger = logger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -116,6 +120,8 @@ namespace BKApi.Controllers
         /// <summary>
         /// VNPay payment callback (Return URL) - Called when user returns from VNPay
         /// </summary>
+        // API/Controllers/PaymentController.cs - VnPayCallback method
+
         [HttpGet("vnpay/callback")]
         [AllowAnonymous]
         public async Task<IActionResult> VnPayCallback()
@@ -136,7 +142,6 @@ namespace BKApi.Controllers
                         PaymentDate = response.PaymentDate
                     };
 
-                    // Get booking by booking code (OrderId)
                     var bookingResponse = await _bookingService.GetByBookingCodeAsync(response.OrderId);
 
                     if (bookingResponse.Success && bookingResponse.Data != null)
@@ -147,8 +152,10 @@ namespace BKApi.Controllers
                             response.OrderId, response.TransactionId);
                     }
 
-                    // Redirect to frontend success page
-                    var frontendUrl = $"{Request.Scheme}://{Request.Host}/payment/success?bookingCode={response.OrderId}&transactionId={response.TransactionId}";
+                    // THAY ĐỔI: Redirect về frontend URL (React)
+                    // Giả sử React app chạy ở localhost:3000
+                    var frontendBaseUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+                    var frontendUrl = $"{frontendBaseUrl}/payment-success?bookingCode={response.OrderId}&transactionId={response.TransactionId}";
                     return Redirect(frontendUrl);
                 }
                 else
@@ -156,19 +163,20 @@ namespace BKApi.Controllers
                     _logger.LogWarning("Payment failed for booking {BookingCode}, Response Code: {ResponseCode}",
                         response.OrderId, response.VnPayResponseCode);
 
-                    // Redirect to frontend failure page
-                    var frontendUrl = $"{Request.Scheme}://{Request.Host}/payment/failure?bookingCode={response.OrderId}&message={Uri.EscapeDataString(response.Message)}";
+                    // THAY ĐỔI: Redirect về frontend failure page
+                    var frontendBaseUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+                    var frontendUrl = $"{frontendBaseUrl}/payment-failure?bookingCode={response.OrderId}&message={Uri.EscapeDataString(response.Message)}";
                     return Redirect(frontendUrl);
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing VNPay callback");
-                var frontendUrl = $"{Request.Scheme}://{Request.Host}/payment/error";
+                var frontendBaseUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:3000";
+                var frontendUrl = $"{frontendBaseUrl}/payment-error";
                 return Redirect(frontendUrl);
             }
         }
-
         /// <summary>
         /// VNPay IPN (Instant Payment Notification) - Called by VNPay server
         /// </summary>
