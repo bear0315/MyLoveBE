@@ -1,5 +1,6 @@
 ﻿using Application.Request.Booking;
 using Application.Response.Booking;
+using Application.Response.Guide;
 using Application.Response.User;
 using System;
 using System.Collections.Generic;
@@ -22,6 +23,7 @@ namespace Application.Interfaces
         Task<BaseResponse<BookingResponse>> UpdateStatusAsync(int id, UpdateBookingStatusRequest request);
         Task<BaseResponse<BookingResponse>> UpdatePaymentAsync(int id, UpdatePaymentRequest request);
         Task<BaseResponse<BookingResponse>> CancelAsync(int id, CancelBookingRequest request);
+        Task<GuideAvailabilityListResponse> GetAvailableGuidesForBookingAsync(int tourId, DateTime tourDate);
         Task<BaseResponse> DeleteAsync(int id);
     }
 }

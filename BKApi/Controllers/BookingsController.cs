@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces;
 using Application.Request.Booking;
 using Application.Response.Booking;
+using Application.Response.Guide;
 using Application.Response.User;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -447,18 +448,109 @@ namespace BKApi.Controllers
             }
         }
 
-        #region Helper Methods
-
-        private int GetCurrentUserId()
+        [AllowAnonymous]
+        [HttpGet("available-guides")]
+        [ProducesResponseType(typeof(GuideAvailabilityListResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetAvailableGuides(
+            [FromQuery] int tourId,
+            [FromQuery] DateTime tourDate)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+            try
             {
-                throw new UnauthorizedAccessException("Invalid user token");
-            }
-            return userId;
-        }
+                if (tourId <= 0)
+                {
+                    return BadRequest(new GuideAvailabilityListResponse
+                    {
+                        Success = false,
+                        Message = "Invalid tour ID"
+                    });
+                }
 
-        #endregion
+                if (tourDate.Date < DateTime.UtcNow.Date)
+                {
+                    return BadRequest(new GuideAvailabilityListResponse
+                    {
+                        Success = false,
+                        Message = "Tour date must be in the future"
+                    });
+                }
+
+                var response = await _bookingService.GetAvailableGuidesForBookingAsync(tourId, tourDate);
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available guides for tour {TourId} on {TourDate}",
+                    tourId, tourDate);
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new GuideAvailabilityListResponse
+                    {
+                        Success = false,
+                        Message = "An error occurred while retrieving available guides"
+                    });
+            }
+        }
+        /// <summary>
+        /// Get available guides for authenticated user's booking (alternative endpoint)
+        /// </summary>
+        [HttpGet("tours/{tourId}/available-guides")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(GuideAvailabilityListResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetAvailableGuidesForTour(
+            int tourId,
+            [FromQuery] DateTime tourDate)
+        {
+            try
+            {
+                if (tourDate.Date < DateTime.UtcNow.Date)
+                {
+                    return BadRequest(new GuideAvailabilityListResponse
+                    {
+                        Success = false,
+                        Message = "Tour date must be in the future"
+                    });
+                }
+
+                var response = await _bookingService.GetAvailableGuidesForBookingAsync(tourId, tourDate);
+
+                if (!response.Success)
+                {
+                    return NotFound(response);
+                }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting available guides for tour {TourId} on {TourDate}",
+                    tourId, tourDate);
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new GuideAvailabilityListResponse
+                    {
+                        Success = false,
+                        Message = "An error occurred while retrieving available guides"
+                    });
+            }
+        }
+            #region Helper Methods
+
+            private int GetCurrentUserId()
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))
+                {
+                    throw new UnauthorizedAccessException("Invalid user token");
+                }
+                return userId;
+            }
+
+            #endregion
+        }
     }
-}
+

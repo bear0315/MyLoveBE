@@ -9,8 +9,7 @@ namespace Application.Interfaces
 {
     public interface IGuideService
     {
-        Task<List<GuideListResponse>> GetGuidesByTourIdAsync(int tourId);
-        Task<GuideListResponse?> GetDefaultGuideForTourAsync(int tourId);
+       
         Task<List<GuideAvailabilityResponse>> GetAvailableGuidesAsync(int tourId, DateTime tourDate);
         Task<bool> IsGuideAvailableAsync(int guideId, DateTime tourDate);
         Task<bool> ValidateGuideForTourAsync(int tourId, int guideId);

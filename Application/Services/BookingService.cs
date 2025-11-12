@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Application.Mappings;
 using Microsoft.EntityFrameworkCore;
+using Application.Response.Guide;
 
 namespace Application.Services
 {
@@ -22,19 +23,25 @@ namespace Application.Services
         private readonly IUserRepository _userRepository;
         private readonly ITourRepository _tourRepository;
         private readonly IAuditLogRepository _auditLogRepository;
+        private readonly ITourGuideRepository _tourGuideRepository;  
+        private readonly ITourService _tourService;
 
         public BookingService(
-            IBookingRepository bookingRepository,
-            IBookingGuestRepository guestRepository,
-            IUserRepository userRepository,
-            ITourRepository tourRepository,
-            IAuditLogRepository auditLogRepository)
+           IBookingRepository bookingRepository,
+           IBookingGuestRepository guestRepository,
+           IUserRepository userRepository,
+           ITourRepository tourRepository,
+           IAuditLogRepository auditLogRepository,
+           ITourGuideRepository tourGuideRepository,  
+           ITourService tourService)  
         {
             _bookingRepository = bookingRepository;
             _guestRepository = guestRepository;
             _userRepository = userRepository;
             _tourRepository = tourRepository;
             _auditLogRepository = auditLogRepository;
+            _tourGuideRepository = tourGuideRepository;  
+            _tourService = tourService; 
         }
 
         public async Task<BaseResponse<BookingResponse>> GetByIdAsync(int id)
@@ -305,6 +312,54 @@ namespace Application.Services
                     };
                 }
 
+                // ✅ ============ XỬ LÝ GUIDE SELECTION ============
+                int? selectedGuideId = null;
+
+                if (request.GuideId.HasValue)
+                {
+                    // Option 1: User đã chọn guide cụ thể
+                    var availableGuides = await _tourService.GetAvailableGuidesForTourAsync(
+                        request.TourId,
+                        request.TourDate);
+
+                    var selectedGuide = availableGuides.FirstOrDefault(g => g.GuideId == request.GuideId.Value);
+
+                    if (selectedGuide == null)
+                    {
+                        return new BaseResponse<BookingResponse>
+                        {
+                            Success = false,
+                            Message = $"Guide with ID {request.GuideId.Value} is not assigned to this tour"
+                        };
+                    }
+
+                    if (!selectedGuide.IsAvailable)
+                    {
+                        return new BaseResponse<BookingResponse>
+                        {
+                            Success = false,
+                            Message = $"Guide {selectedGuide.FullName} is not available on {request.TourDate:yyyy-MM-dd}"
+                        };
+                    }
+
+                    selectedGuideId = request.GuideId.Value;
+                }
+                else
+                {
+                    // Option 2: Tự động gán guide (priority: default guide available > first available guide)
+                    var defaultGuideId = await _tourService.GetDefaultGuideIdForTourAsync(
+                        request.TourId,
+                        request.TourDate);
+
+                    if (defaultGuideId.HasValue)
+                    {
+                        selectedGuideId = defaultGuideId.Value;
+                    }
+                    // Nếu không có guide available, vẫn cho phép tạo booking nhưng không có guide
+                    // (Có thể thay đổi logic này tùy business requirement)
+                }
+                // ✅ ============ KẾT THÚC XỬ LÝ GUIDE ============
+
                 // Parse payment method
                 if (!Enum.TryParse<PaymentMethod>(request.PaymentMethod, true, out var paymentMethod))
                 {
@@ -327,6 +382,7 @@ namespace Application.Services
                     BookingCode = bookingCode,
                     UserId = userId,
                     TourId = request.TourId,
+                    GuideId = selectedGuideId,  
                     TourDate = request.TourDate,
                     NumberOfGuests = request.NumberOfGuests,
                     TotalAmount = totalAmount,
@@ -365,8 +421,10 @@ namespace Application.Services
                 var bookingWithDetails = await _bookingRepository.GetByIdWithDetailsAsync(createdBooking.Id);
 
                 // Log audit
+                var guideName = selectedGuideId.HasValue ?
+                    $", Guide ID: {selectedGuideId.Value}" : ", No guide assigned";
                 await LogAuditAsync(userId, "BOOKING_CREATED", "Booking", createdBooking.Id,
-                    $"Booking created: {bookingCode}");
+                    $"Booking created: {bookingCode}{guideName}");
 
                 return new BaseResponse<BookingResponse>
                 {
@@ -672,6 +730,7 @@ namespace Application.Services
             }
         }
 
+
         public async Task<BaseResponse> DeleteAsync(int id)
         {
             try
@@ -718,9 +777,78 @@ namespace Application.Services
             }
         }
 
-        #region Private Helper Methods
+        public async Task<GuideAvailabilityListResponse> GetAvailableGuidesForBookingAsync(int tourId, DateTime tourDate)
+        {
+            try
+            {
+                // Validate tour exists
+                var tour = await _tourRepository.GetByIdAsync(tourId);
+                if (tour == null)
+                {
+                    return new GuideAvailabilityListResponse
+                    {
+                        Success = false,
+                        Message = "Tour not found"
+                    };
+                }
 
-        private async Task<string> GenerateBookingCodeAsync()
+                // Get available guides from TourService
+                var availableGuides = await _tourService.GetAvailableGuidesForTourAsync(tourId, tourDate);
+
+                if (!availableGuides.Any())
+                {
+                    return new GuideAvailabilityListResponse
+                    {
+                        Success = true,
+                        Message = "No guides available for this tour on the selected date",
+                        Data = new List<GuideAvailabilityResponse>()
+                    };
+                }
+
+                // Map to response
+                var guideResponses = new List<GuideAvailabilityResponse>();
+
+                foreach (var guide in availableGuides)
+                {
+                    var response = new GuideAvailabilityResponse
+                    {
+                        GuideId = guide.GuideId,
+                        FullName = guide.FullName,
+                        Avatar = guide.Avatar,
+                        IsAvailable = guide.IsAvailable,
+                    };
+
+                    guideResponses.Add(response);
+                }
+
+                // Sort: available first, then by default guide, then by name
+                var sortedGuides = guideResponses
+                    .OrderByDescending(g => g.IsAvailable)
+                    .ThenByDescending(g => g.IsDefaultGuide)
+                    .ThenBy(g => g.FullName)
+                    .ToList();
+
+                return new GuideAvailabilityListResponse
+                {
+                    Success = true,
+                    Message = $"Found {sortedGuides.Count(g => g.IsAvailable)} available guide(s) for this tour",
+                    Data = sortedGuides
+                };
+            }
+            catch (Exception ex)
+            {
+                return new GuideAvailabilityListResponse
+                {
+                    Success = false,
+                    Message = $"Error retrieving available guides: {ex.Message}",
+                    Data = new List<GuideAvailabilityResponse>()
+                };
+            }
+        }
+
+            #region Private Helper Methods
+
+            private async Task<string> GenerateBookingCodeAsync()
         {
             string code;
             bool exists;
@@ -760,6 +888,8 @@ namespace Application.Services
                 // Log audit failure silently
             }
         }
+
+      
 
         #endregion
     }

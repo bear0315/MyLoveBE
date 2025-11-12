@@ -33,7 +33,11 @@ namespace Application.Request.Tour
         public List<CreateTourItineraryDto>? Itineraries { get; set; }
         public List<string>? Includes { get; set; }
         public List<string>? Excludes { get; set; }
+        /// <summary>
+        /// Danh sách Guide IDs cho tour này
+        /// </summary>
         public List<int>? GuideIds { get; set; }
+        public int? DefaultGuideId { get; set; }
         public List<int>? TagIds { get; set; }
     }
 }

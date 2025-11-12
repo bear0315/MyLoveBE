@@ -8,15 +8,15 @@ namespace Application.Response.Guide
 {
     public class GuideAvailabilityResponse
     {
-        public int Id { get; set; }
+        public int GuideId { get; set; }
         public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
         public string? Avatar { get; set; }
-        public string? Bio { get; set; }
-        public string? Languages { get; set; }
-        public int ExperienceYears { get; set; }
-        public decimal AverageRating { get; set; }
-        public int TotalReviews { get; set; }
-        public bool IsDefault { get; set; }
+        public bool IsDefaultGuide { get; set; }
         public bool IsAvailable { get; set; }
+        public string? UnavailableReason { get; set; }
+        public int TotalBookingsOnDate { get; set; }
     }
+
 }

@@ -17,12 +17,12 @@ namespace Infrastructure.Repository
         public async Task<IEnumerable<TourGuide>> GetByTourIdAsync(int tourId)
         {
             return await _context.TourGuides
-                .Include(tg => tg.Guide)
-                    .ThenInclude(g => g.User)
+                .Include(tg => tg.Guide)          
+                    .ThenInclude(g => g.User)   
+                .Include(tg => tg.Tour)           
                 .Where(tg => tg.TourId == tourId)
                 .ToListAsync();
         }
-
         public async Task<IEnumerable<TourGuide>> GetByGuideIdAsync(int guideId)
         {
             return await _context.TourGuides

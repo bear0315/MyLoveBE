@@ -23,6 +23,7 @@ namespace Application.Services
         private readonly ITourExcludeRepository _excludeRepository;
         private readonly ITourGuideRepository _tourGuideRepository;
         private readonly ITourTagRepository _tourTagRepository;
+        private readonly IGuideRepository _guideRepository;
 
         public TourService(
             ITourRepository tourRepository,
@@ -31,7 +32,8 @@ namespace Application.Services
             ITourIncludeRepository includeRepository,
             ITourExcludeRepository excludeRepository,
             ITourGuideRepository tourGuideRepository,
-            ITourTagRepository tourTagRepository)
+            ITourTagRepository tourTagRepository,
+            IGuideRepository guideRepository)
         {
             _tourRepository = tourRepository;
             _imageRepository = imageRepository;
@@ -40,6 +42,7 @@ namespace Application.Services
             _excludeRepository = excludeRepository;
             _tourGuideRepository = tourGuideRepository;
             _tourTagRepository = tourTagRepository;
+            _guideRepository = guideRepository;
         }
 
         public async Task<TourDetailResponse?> GetTourByIdAsync(int id)
@@ -164,13 +167,49 @@ namespace Application.Services
                 await _excludeRepository.BulkAddAsync(excludes);
             }
 
+            // ===== IMPROVED: Add Guides with validation =====
             if (request.GuideIds != null && request.GuideIds.Any())
             {
-                var tourGuides = request.GuideIds.Select((guideId, index) => new TourGuide
+                // 1. Validate tất cả guides tồn tại
+                var validGuides = new List<int>();
+                foreach (var guideId in request.GuideIds.Distinct()) // Distinct để tránh duplicate
+                {
+                    var guide = await _guideRepository.GetByIdAsync(guideId);
+                    if (guide != null)
+                    {
+                        validGuides.Add(guideId);
+                    }
+                }
+
+                if (!validGuides.Any())
+                {
+                    throw new ArgumentException("No valid guides found in the provided list");
+                }
+
+                // 2. Xác định default guide
+                int defaultGuideId;
+                if (request.DefaultGuideId.HasValue)
+                {
+                    // Kiểm tra DefaultGuideId có nằm trong GuideIds không
+                    if (!validGuides.Contains(request.DefaultGuideId.Value))
+                    {
+                        throw new ArgumentException(
+                            "Default guide must be one of the selected guides for this tour");
+                    }
+                    defaultGuideId = request.DefaultGuideId.Value;
+                }
+                else
+                {
+                    // Nếu không chọn, lấy guide đầu tiên làm default
+                    defaultGuideId = validGuides.First();
+                }
+
+                // 3. Tạo TourGuide records
+                var tourGuides = validGuides.Select(guideId => new TourGuide
                 {
                     TourId = createdTour.Id,
                     GuideId = guideId,
-                    IsDefault = index == 0
+                    IsDefault = guideId == defaultGuideId
                 }).ToList();
 
                 await _tourGuideRepository.BulkAddAsync(tourGuides);
@@ -292,17 +331,56 @@ namespace Application.Services
                 await _excludeRepository.BulkAddAsync(excludes);
             }
 
+            // ===== IMPROVED: Update Guides with validation =====
             if (request.GuideIds != null)
             {
+                // Delete existing guides
                 await _tourGuideRepository.BulkDeleteByTourIdAsync(id);
-                var tourGuides = request.GuideIds.Select((guideId, index) => new TourGuide
-                {
-                    TourId = id,
-                    GuideId = guideId,
-                    IsDefault = index == 0
-                }).ToList();
 
-                await _tourGuideRepository.BulkAddAsync(tourGuides);
+                if (request.GuideIds.Any())
+                {
+                    // 1. Validate guides
+                    var validGuides = new List<int>();
+                    foreach (var guideId in request.GuideIds.Distinct())
+                    {
+                        var guide = await _guideRepository.GetByIdAsync(guideId);
+                        if (guide != null)
+                        {
+                            validGuides.Add(guideId);
+                        }
+                    }
+
+                    if (!validGuides.Any())
+                    {
+                        throw new ArgumentException("No valid guides found in the provided list");
+                    }
+
+                    // 2. Determine default guide
+                    int defaultGuideId;
+                    if (request.DefaultGuideId.HasValue)
+                    {
+                        if (!validGuides.Contains(request.DefaultGuideId.Value))
+                        {
+                            throw new ArgumentException(
+                                "Default guide must be one of the selected guides for this tour");
+                        }
+                        defaultGuideId = request.DefaultGuideId.Value;
+                    }
+                    else
+                    {
+                        defaultGuideId = validGuides.First();
+                    }
+
+                    // 3. Create TourGuide records
+                    var tourGuides = validGuides.Select(guideId => new TourGuide
+                    {
+                        TourId = id,
+                        GuideId = guideId,
+                        IsDefault = guideId == defaultGuideId
+                    }).ToList();
+
+                    await _tourGuideRepository.BulkAddAsync(tourGuides);
+                }
             }
 
             if (request.TagIds != null)
@@ -437,8 +515,122 @@ namespace Application.Services
                 // Add other stats as needed
             };
         }
+        #region Guide Methods
 
-        public async Task UpdateTourStatisticsAsync(int tourId)
+        public async Task<List<AvailableGuideDto>> GetAvailableGuidesForTourAsync(int tourId, DateTime tourDate)
+        {
+            // Lấy tất cả guides của tour
+            var tourGuides = await _tourGuideRepository.GetByTourIdAsync(tourId);
+
+            var availableGuides = new List<AvailableGuideDto>();
+
+            foreach (var tg in tourGuides)
+            {
+                if (tg.Guide == null) continue;
+
+                // Kiểm tra guide có available không
+                var isAvailable = await _tourGuideRepository.IsGuideAvailableAsync(tg.GuideId, tourDate);
+
+                availableGuides.Add(new AvailableGuideDto
+                {
+                    GuideId = tg.GuideId,
+                    FullName = tg.Guide.FullName,
+                    Avatar = tg.Guide.Avatar,
+                    Bio = tg.Guide.Bio,
+                    Languages = tg.Guide.Languages,
+                    AverageRating = tg.Guide.AverageRating,
+                    TotalReviews = tg.Guide.TotalReviews,
+                    IsDefault = tg.IsDefault,
+                    IsAvailable = isAvailable,
+                    Specialties = ParseLanguages(tg.Guide.Languages)
+                });
+            }
+
+            // Sắp xếp: Available trước, default guide trước, rating cao trước
+            return availableGuides
+                .OrderByDescending(g => g.IsAvailable)
+                .ThenByDescending(g => g.IsDefault)
+                .ThenByDescending(g => g.AverageRating)
+                .ToList();
+        }
+
+        public async Task<GuideDetailDto?> GetGuideDetailAsync(int guideId)
+        {
+            var guide = await _guideRepository.GetByIdAsync(guideId);
+            if (guide == null) return null;
+
+            // Lấy tours của guide
+            var tourGuides = await _tourGuideRepository.GetByGuideIdAsync(guideId);
+
+            return new GuideDetailDto
+            {
+                GuideId = guide.Id,
+                FullName = guide.FullName,
+                Email = guide.Email,
+                PhoneNumber = guide.PhoneNumber,
+                Avatar = guide.Avatar,
+                Bio = guide.Bio,
+                Languages = guide.Languages,
+                AverageRating = guide.AverageRating,
+                TotalReviews = guide.TotalReviews,
+                YearsOfExperience = guide.ExperienceYears,
+                Specialties = ParseLanguages(guide.Languages),
+                Tours = tourGuides.Select(tg => new GuideTourDto
+                {
+                    TourId = tg.TourId,
+                    TourName = tg.Tour?.Name ?? "",
+                    TourImage = tg.Tour?.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl,
+                    TourRating = tg.Tour?.AverageRating ?? 0,
+                    IsDefault = tg.IsDefault
+                }).ToList()
+            };
+        }
+
+        public async Task<bool> IsGuideAvailableAsync(int guideId, DateTime tourDate)
+        {
+            return await _tourGuideRepository.IsGuideAvailableAsync(guideId, tourDate);
+        }
+
+        public async Task<int?> GetDefaultGuideIdForTourAsync(int tourId, DateTime tourDate)
+        {
+            // Lấy default guide
+            var defaultGuide = await _tourGuideRepository.GetDefaultGuideForTourAsync(tourId);
+
+            if (defaultGuide != null)
+            {
+                // Kiểm tra available
+                var isAvailable = await _tourGuideRepository.IsGuideAvailableAsync(defaultGuide.GuideId, tourDate);
+                if (isAvailable)
+                {
+                    return defaultGuide.GuideId;
+                }
+            }
+
+            // Nếu default guide không available, tìm guide available khác
+            var availableGuides = await GetAvailableGuidesForTourAsync(tourId, tourDate);
+            var firstAvailable = availableGuides.FirstOrDefault(g => g.IsAvailable);
+
+            return firstAvailable?.GuideId;
+        }
+
+        #endregion
+
+        #region Helper Methods
+
+        private List<string> ParseLanguages(string? languages)
+        {
+            if (string.IsNullOrWhiteSpace(languages))
+                return new List<string>();
+
+            return languages.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                           .Select(l => l.Trim())
+                           .ToList();
+        }
+
+        #endregion
+    
+
+    public async Task UpdateTourStatisticsAsync(int tourId)
         {
             await _tourRepository.UpdateTourStatisticsAsync(tourId);
         }

@@ -327,5 +327,70 @@ namespace BKApi.Controllers
 
             return Ok(new { message = $"Deleted {tourIds.Count} tours" });
         }
+        #region Guide Endpoints
+
+        /// <summary>
+        /// Lấy danh sách guides available cho tour vào ngày cụ thể
+        /// </summary>
+        [HttpGet("{id}/guides")]
+        public async Task<ActionResult<List<AvailableGuideDto>>> GetAvailableGuides(
+            int id,
+            [FromQuery] DateTime tourDate)
+        {
+            var tour = await _tourService.GetTourByIdAsync(id);
+            if (tour == null)
+                return NotFound(new { message = $"Tour with ID {id} not found" });
+
+            var guides = await _tourService.GetAvailableGuidesForTourAsync(id, tourDate);
+            return Ok(guides);
+        }
+
+        /// <summary>
+        /// Lấy chi tiết guide
+        /// </summary>
+        [HttpGet("guides/{guideId}")]
+        public async Task<ActionResult<GuideDetailDto>> GetGuideDetail(int guideId)
+        {
+            var guide = await _tourService.GetGuideDetailAsync(guideId);
+            if (guide == null)
+                return NotFound(new { message = $"Guide with ID {guideId} not found" });
+
+            return Ok(guide);
+        }
+
+        /// <summary>
+        /// Kiểm tra guide có available cho tour vào ngày cụ thể không
+        /// </summary>
+        [HttpGet("guides/{guideId}/availability")]
+        public async Task<ActionResult<object>> CheckGuideAvailability(
+            int guideId,
+            [FromQuery] DateTime tourDate)
+        {
+            var isAvailable = await _tourService.IsGuideAvailableAsync(guideId, tourDate);
+            return Ok(new { guideId, tourDate, isAvailable });
+        }
+
+        /// <summary>
+        /// Lấy default guide cho tour vào ngày cụ thể
+        /// </summary>
+        [HttpGet("{id}/default-guide")]
+        public async Task<ActionResult<object>> GetDefaultGuide(
+            int id,
+            [FromQuery] DateTime tourDate)
+        {
+            var tour = await _tourService.GetTourByIdAsync(id);
+            if (tour == null)
+                return NotFound(new { message = $"Tour with ID {id} not found" });
+
+            var guideId = await _tourService.GetDefaultGuideIdForTourAsync(id, tourDate);
+
+            if (guideId == null)
+                return NotFound(new { message = "No available guide found for this tour on the specified date" });
+
+            var guide = await _tourService.GetGuideDetailAsync(guideId.Value);
+            return Ok(guide);
+        }
+
+        #endregion
     }
 }

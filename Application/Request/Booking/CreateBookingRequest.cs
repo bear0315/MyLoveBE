@@ -18,6 +18,7 @@ namespace Application.Request.Booking
         [Required]
         [Range(1, 100, ErrorMessage = "Number of guests must be between 1 and 100")]
         public int NumberOfGuests { get; set; }
+        public int? GuideId { get; set; }
 
         [Required]
         [MaxLength(255)]

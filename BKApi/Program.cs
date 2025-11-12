@@ -38,6 +38,7 @@ builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IDestinationRepository, DestinationRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IReviewImageRepository, ReviewImageRepository>();
+builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 // Booking Repositories
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IBookingGuestRepository, BookingGuestRepository>();
