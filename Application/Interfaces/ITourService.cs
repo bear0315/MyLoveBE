@@ -47,5 +47,24 @@ namespace Application.Interfaces
         Task<bool> IsTourExistsAsync(int id);
         Task<bool> IsSlugExistsAsync(string slug, int? excludeId = null);
         string GenerateSlug(string name);
+        /// <summary>
+        /// Lấy danh sách guides available cho tour vào ngày cụ thể
+        /// </summary>
+        Task<List<AvailableGuideDto>> GetAvailableGuidesForTourAsync(int tourId, DateTime tourDate);
+
+        /// <summary>
+        /// Lấy thông tin chi tiết guide
+        /// </summary>
+        Task<GuideDetailDto?> GetGuideDetailAsync(int guideId);
+
+        /// <summary>
+        /// Kiểm tra guide có available cho tour vào ngày cụ thể không
+        /// </summary>
+        Task<bool> IsGuideAvailableAsync(int guideId, DateTime tourDate);
+
+        /// <summary>
+        /// Lấy default guide cho tour
+        /// </summary>
+        Task<int?> GetDefaultGuideIdForTourAsync(int tourId, DateTime tourDate);
     }
 }

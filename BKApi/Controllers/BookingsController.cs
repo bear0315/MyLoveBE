@@ -74,7 +74,6 @@ namespace BKApi.Controllers
                 var currentUserId = GetCurrentUserId();
                 var currentUserRole = User.FindFirst(ClaimTypes.Role)?.Value;
 
-                // Users can only view their own bookings unless they are Admin
                 if (response.Data!.UserId != currentUserId && currentUserRole != "Admin")
                 {
                     return StatusCode(StatusCodes.Status403Forbidden, new BaseResponse<BookingResponse>
