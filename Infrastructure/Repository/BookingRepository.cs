@@ -23,9 +23,12 @@ namespace Infrastructure.Repository
         public async Task<Booking?> GetByIdAsync(int id)
         {
             return await _context.Bookings
+                .Include(b => b.Guide)       
+                .Include(b => b.Guests)      
+                .Include(b => b.Tour)      
+                .Include(b => b.User)      
                 .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted);
         }
-
         public async Task<Booking?> GetByBookingCodeAsync(string bookingCode)
         {
             return await _context.Bookings
@@ -51,6 +54,34 @@ namespace Infrastructure.Repository
                 .Include(b => b.Guide)
                 .Where(b => !b.IsDeleted)
                 .AsQueryable();
+        }
+
+        public IQueryable<Booking> GetAllBasic()
+        {
+            Console.WriteLine($"[BookingRepository] GetAllBasic called");
+            Console.WriteLine($"[BookingRepository] _context is null: {_context == null}");
+
+            if (_context != null)
+            {
+                Console.WriteLine($"[BookingRepository] _context.Bookings is null: {_context.Bookings == null}");
+            }
+
+            if (_context == null)
+                throw new InvalidOperationException("DatabaseContext is NULL in BookingRepository");
+
+            if (_context.Bookings == null)
+                throw new InvalidOperationException("Bookings DbSet is NULL in DatabaseContext");
+
+            var query = _context.Bookings.AsNoTracking();
+            Console.WriteLine($"[BookingRepository] AsNoTracking query created: {query != null}");
+
+            var filtered = query.Where(b => !b.IsDeleted);
+            Console.WriteLine($"[BookingRepository] Where filter applied: {filtered != null}");
+
+            var result = filtered.AsQueryable();
+            Console.WriteLine($"[BookingRepository] AsQueryable result: {result != null}");
+
+            return result;
         }
 
         public async Task<List<Booking>> GetByUserIdAsync(int userId)

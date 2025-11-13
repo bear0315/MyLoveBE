@@ -447,7 +447,6 @@ namespace BKApi.Controllers
                 });
             }
         }
-
         [AllowAnonymous]
         [HttpGet("available-guides")]
         [ProducesResponseType(typeof(GuideAvailabilityListResponse), StatusCodes.Status200OK)]
@@ -467,13 +466,17 @@ namespace BKApi.Controllers
                     });
                 }
 
-                if (tourDate.Date < DateTime.UtcNow.Date)
+                var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+                if (string.IsNullOrEmpty(userRole) || userRole == "Customer")
                 {
-                    return BadRequest(new GuideAvailabilityListResponse
+                    if (tourDate.Date < DateTime.UtcNow.Date)
                     {
-                        Success = false,
-                        Message = "Tour date must be in the future"
-                    });
+                        return BadRequest(new GuideAvailabilityListResponse
+                        {
+                            Success = false,
+                            Message = "Tour date must be in the future"
+                        });
+                    }
                 }
 
                 var response = await _bookingService.GetAvailableGuidesForBookingAsync(tourId, tourDate);

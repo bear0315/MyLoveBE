@@ -16,5 +16,7 @@ namespace Application.Response.Booking
         public string? PassportNumber { get; set; }
         public string? Nationality { get; set; }
         public string? SpecialRequirements { get; set; }
+        public string? Phone { get; set; }
+        public string? Email { get; set; }
     }
 }

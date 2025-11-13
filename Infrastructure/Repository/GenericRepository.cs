@@ -25,6 +25,10 @@ namespace Infrastructure.Repository
         {
             return await _dbSet.FindAsync(id);
         }
+        public virtual IQueryable<T> GetAll()
+        {
+            return _dbSet.AsQueryable();
+        }
 
         public virtual async Task<IEnumerable<T>> GetAllAsync()
         {

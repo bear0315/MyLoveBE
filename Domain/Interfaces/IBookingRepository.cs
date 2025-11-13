@@ -13,6 +13,7 @@ namespace Domain.Interfaces
         Task<Booking?> GetByBookingCodeAsync(string bookingCode);
         Task<Booking?> GetByIdWithDetailsAsync(int id);
         IQueryable<Booking> GetAll();
+        IQueryable<Booking> GetAllBasic(); 
         Task<List<Booking>> GetByUserIdAsync(int userId);
         Task<List<Booking>> GetByTourIdAsync(int tourId);
         Task<List<Booking>> GetByGuideIdAsync(int guideId);

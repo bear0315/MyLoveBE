@@ -3,8 +3,6 @@ using Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Application.Mappings
 {
@@ -21,32 +19,43 @@ namespace Application.Mappings
                 BookingCode = booking.BookingCode,
                 UserId = booking.UserId,
                 UserName = booking.User?.FullName ?? string.Empty,
+
                 TourId = booking.TourId,
                 TourName = booking.Tour?.Name ?? string.Empty,
                 TourLocation = booking.Tour?.Location ?? string.Empty,
+
                 GuideId = booking.GuideId,
-                GuideName = booking.Guide?.FullName,
+                GuideName = booking.Guide?.FullName ?? string.Empty,
+                GuideEmail= booking.Guide?.Email ?? string.Empty,
+                GuidePhone =booking.Guide?.PhoneNumber ?? string.Empty,
 
                 TourDate = booking.TourDate,
                 NumberOfGuests = booking.NumberOfGuests,
                 TotalAmount = booking.TotalAmount,
                 Status = booking.Status.ToString(),
 
+                // Payment
                 PaymentStatus = booking.PaymentStatus.ToString(),
                 PaymentMethod = booking.PaymentMethod.ToString(),
                 PaymentTransactionId = booking.PaymentTransactionId,
                 PaymentDate = booking.PaymentDate,
 
+                // Customer info
                 CustomerName = booking.CustomerName,
                 CustomerEmail = booking.CustomerEmail,
                 CustomerPhone = booking.CustomerPhone,
                 SpecialRequests = booking.SpecialRequests,
 
+                // Cancellation
                 CancelledAt = booking.CancelledAt,
                 CancellationReason = booking.CancellationReason,
                 RefundAmount = booking.RefundAmount,
 
-                Guests = booking.Guests?.Select(g => g.ToBookingGuestResponse()).ToList() ?? new List<BookingGuestResponse>(),
+                // Guests
+                Guests = booking.Guests?
+                    .Select(g => g.ToBookingGuestResponse())
+                    .ToList()
+                    ?? new List<BookingGuestResponse>(),
 
                 CreatedAt = booking.CreatedAt,
                 UpdatedAt = booking.UpdatedAt
@@ -66,7 +75,7 @@ namespace Application.Mappings
                 Gender = guest.Gender,
                 PassportNumber = guest.PassportNumber,
                 Nationality = guest.Nationality,
-                SpecialRequirements = guest.SpecialRequirements
+                SpecialRequirements = guest.SpecialRequirements,
             };
         }
 

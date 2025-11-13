@@ -17,6 +17,8 @@ namespace Application.Response.Booking
         public string TourLocation { get; set; } = string.Empty;
         public int? GuideId { get; set; }
         public string? GuideName { get; set; }
+        public string? GuidePhone { get; set; }
+        public string? GuideEmail { get; set; }
 
         // Booking Details
         public DateTime TourDate { get; set; }

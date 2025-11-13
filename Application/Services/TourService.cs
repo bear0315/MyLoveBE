@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Application.Response.Guide;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
@@ -25,6 +26,7 @@ namespace Application.Services
         private readonly ITourGuideRepository _tourGuideRepository;
         private readonly ITourTagRepository _tourTagRepository;
         private readonly IGuideRepository _guideRepository;
+        private readonly IBookingRepository _bookingRepository;
 
         public TourService(
             ITourRepository tourRepository,
@@ -34,7 +36,9 @@ namespace Application.Services
             ITourExcludeRepository excludeRepository,
             ITourGuideRepository tourGuideRepository,
             ITourTagRepository tourTagRepository,
-            IGuideRepository guideRepository)
+            IGuideRepository guideRepository,
+             IBookingRepository _bookingRepository
+            )
         {
             _tourRepository = tourRepository;
             _imageRepository = imageRepository;
@@ -44,6 +48,7 @@ namespace Application.Services
             _tourGuideRepository = tourGuideRepository;
             _tourTagRepository = tourTagRepository;
             _guideRepository = guideRepository;
+            _bookingRepository = _bookingRepository;
         }
 
         public async Task<TourDetailResponse?> GetTourByIdAsync(int id)
@@ -520,41 +525,77 @@ namespace Application.Services
 
         public async Task<List<AvailableGuideDto>> GetAvailableGuidesForTourAsync(int tourId, DateTime tourDate)
         {
-            // Lấy tất cả guides của tour
-            var tourGuides = await _tourGuideRepository.GetByTourIdAsync(tourId);
-
-            var availableGuides = new List<AvailableGuideDto>();
-
-            foreach (var tg in tourGuides)
+            try
             {
-                if (tg.Guide == null) continue;
+                var checkDate = tourDate.Date;
 
-                // Kiểm tra guide có available không
-                var isAvailable = await _tourGuideRepository.IsGuideAvailableAsync(tg.GuideId, tourDate);
+                // 1. Get all tour-guide assignments
+                var tourGuides = await _tourGuideRepository
+                    .GetAll()
+                    .Where(tg => tg.TourId == tourId)
+                    .Include(tg => tg.Guide)
+                    .Include(tg => tg.Guide.User)
+                    .ToListAsync();
 
-                availableGuides.Add(new AvailableGuideDto
+                if (!tourGuides.Any())
                 {
-                    GuideId = tg.GuideId,
-                    FullName = tg.Guide.FullName,
-                    Avatar = tg.Guide.Avatar,
-                    Bio = tg.Guide.Bio,
-                    Languages = tg.Guide.Languages,
-                    AverageRating = tg.Guide.AverageRating,
-                    TotalReviews = tg.Guide.TotalReviews,
-                    IsDefault = tg.IsDefault,
-                    IsAvailable = isAvailable,
-                    Specialties = ParseLanguages(tg.Guide.Languages)
-                });
+                    return new List<AvailableGuideDto>();
+                }
+
+                var result = new List<AvailableGuideDto>();
+
+                foreach (var tg in tourGuides)
+                {
+                    // 2. Get guide info
+                    Guide guide;
+                    if (tg.Guide != null)
+                    {
+                        guide = tg.Guide;
+                    }
+                    else
+                    {
+                        guide = await _guideRepository.GetByIdAsync(tg.GuideId);
+                        if (guide == null) continue;
+                    }
+
+                    // 3. ✅ Check availability using repository method
+                    bool isAvailable = await _tourGuideRepository.IsGuideAvailableAsync(tg.GuideId, checkDate);
+
+                    // 4. Build DTO
+                    var dto = new AvailableGuideDto
+                    {
+                        GuideId = tg.GuideId,
+                        FullName = guide.FullName ?? guide.User?.FullName ?? "Unknown",
+                        Avatar = guide.Avatar ?? guide.User?.Avatar,
+                        Bio = guide.Bio,
+                        Languages = guide.Languages,
+                        IsAvailable = isAvailable,
+                        IsDefaultGuide = tg.IsDefault,
+                        AverageRating = guide.AverageRating,
+                        TotalReviews = guide.TotalReviews,
+
+                        // Nếu không available, hiển thị lý do chung
+                        UnavailabilityReason = !isAvailable
+                            ? $"Hướng dẫn viên đã có lịch vào ngày {checkDate:dd/MM/yyyy}"
+                            : null,
+                    };
+
+                    result.Add(dto);
+
+                    Console.WriteLine($"[TourService] Guide {guide.FullName} (ID: {tg.GuideId}):");
+                    Console.WriteLine($"  - IsAvailable: {isAvailable}");
+                    Console.WriteLine($"  - Check Date: {checkDate:yyyy-MM-dd}");
+                }
+
+                return result;
             }
-
-            // Sắp xếp: Available trước, default guide trước, rating cao trước
-            return availableGuides
-                .OrderByDescending(g => g.IsAvailable)
-                .ThenByDescending(g => g.IsDefault)
-                .ThenByDescending(g => g.AverageRating)
-                .ToList();
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TourService] Error in GetAvailableGuidesForTourAsync: {ex.Message}");
+                Console.WriteLine($"[TourService] Stack Trace: {ex.StackTrace}");
+                throw;
+            }
         }
-
         public async Task<GuideDetailDto?> GetGuideDetailAsync(int guideId)
         {
             var guide = await _guideRepository.GetByIdAsync(guideId);

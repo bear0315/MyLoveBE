@@ -8,16 +8,20 @@ namespace Application.Response.Tour
 {
     public class AvailableGuideDto
     {
+
         public int GuideId { get; set; }
         public string FullName { get; set; } = string.Empty;
         public string? Avatar { get; set; }
-        public string? Bio { get; set; }
-        public string? Languages { get; set; }
-        public decimal AverageRating { get; set; }
-        public int TotalReviews { get; set; }
-        public int TotalTours { get; set; }
-        public bool IsDefault { get; set; }
         public bool IsAvailable { get; set; }
-        public List<string> Specialties { get; set; } = new();
+        public bool IsDefaultGuide { get; set; }
+
+        public string? UnavailabilityReason { get; set; }
+        public string? ConflictingBookingCode { get; set; }
+        public int? ConflictingBookingId { get; set; }
+        public string Bio { get; set; } = string.Empty; 
+
+        public decimal? AverageRating { get; set; }
+        public int? TotalReviews { get; set; }
+        public string? Languages { get; set; }
     }
 }
