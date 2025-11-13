@@ -18,7 +18,7 @@ namespace Infrastructure.Data
                 new User
                 {
                     Id = 1,
-                    Email = "c",
+                    Email = "admin@tourapp.com",
                     PasswordHash = "$2a$11$XKXHGkzJfYfqf.n6fJ5gxuK9VW.9Jfx5YzLXxJxP5QxfN5fJ5fJ5f", // Password123!
                     FullName = "System Administrator",
                     PhoneNumber = "+84901234567",
