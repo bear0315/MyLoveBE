@@ -1,4 +1,6 @@
-﻿using Application.Response.Guide;
+﻿using Application.Request.Guid;
+using Application.Response.Guide;
+using Application.Response.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,5 +15,9 @@ namespace Application.Interfaces
         Task<GuideDetailResponse?> GetGuideByIdAsync(int id);
         Task<List<GuideListResponse>> GetActiveGuidesAsync();
         Task<List<GuideListResponse>> SearchGuidesAsync(string? keyword = null, string? language = null);
+        Task<BaseResponse<GuideProfileResponse>> UpdateProfileAsync(int userId, UpdateGuideProfileRequest request);
+        Task<GuideDetailResponse> GetGuideByUserIdAsync(int userId);
+
+
     }
 }

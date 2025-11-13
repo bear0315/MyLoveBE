@@ -312,7 +312,7 @@ namespace Application.Services
                     };
                 }
 
-                // ✅ ============ XỬ LÝ GUIDE SELECTION ============
+                //  ============ XỬ LÝ GUIDE SELECTION ============
                 int? selectedGuideId = null;
 
                 if (request.GuideId.HasValue)
@@ -355,10 +355,9 @@ namespace Application.Services
                     {
                         selectedGuideId = defaultGuideId.Value;
                     }
-                    // Nếu không có guide available, vẫn cho phép tạo booking nhưng không có guide
-                    // (Có thể thay đổi logic này tùy business requirement)
+                    
                 }
-                // ✅ ============ KẾT THÚC XỬ LÝ GUIDE ============
+                //  ============ KẾT THÚC XỬ LÝ GUIDE ============
 
                 // Parse payment method
                 if (!Enum.TryParse<PaymentMethod>(request.PaymentMethod, true, out var paymentMethod))
