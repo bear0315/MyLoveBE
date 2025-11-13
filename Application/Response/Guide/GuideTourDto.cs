@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Application.Response.Tour
+namespace Application.Response.Guide
 {
     public class GuideTourDto
     {

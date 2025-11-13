@@ -538,9 +538,81 @@ namespace BKApi.Controllers
                     });
             }
         }
-            #region Helper Methods
+        [HttpPatch("{id}/assign-guide")]
+        [Authorize(Roles = "Admin,Manager")]
+        [ProducesResponseType(typeof(BaseResponse<BookingResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AssignGuide(
+    int id,
+    [FromBody] AssignGuideRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new BaseResponse<BookingResponse>
+                    {
+                        Success = false,
+                        Message = "Invalid input data"
+                    });
+                }
 
-            private int GetCurrentUserId()
+                var response = await _bookingService.AssignGuideAsync(id, request.GuideId);
+
+                if (!response.Success)
+                {
+                    return BadRequest(response);
+                }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning guide to booking: {Id}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new BaseResponse<BookingResponse>
+                    {
+                        Success = false,
+                        Message = "An error occurred while assigning guide"
+                    });
+            }
+        }
+
+        /// <summary>
+        /// Remove guide from booking (Admin only)
+        /// </summary>
+        [HttpDelete("{id}/guide")]
+        [Authorize(Roles = "Admin,Manager")]
+        [ProducesResponseType(typeof(BaseResponse<BookingResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> RemoveGuide(int id)
+        {
+            try
+            {
+                var response = await _bookingService.AssignGuideAsync(id, null);
+
+                if (!response.Success)
+                {
+                    return NotFound(response);
+                }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error removing guide from booking: {Id}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new BaseResponse<BookingResponse>
+                    {
+                        Success = false,
+                        Message = "An error occurred while removing guide"
+                    });
+            }
+        }
+        #region Helper Methods
+
+        private int GetCurrentUserId()
             {
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int userId))

@@ -845,6 +845,95 @@ namespace Application.Services
                 };
             }
         }
+        public async Task<BaseResponse<BookingResponse>> AssignGuideAsync(int bookingId, int? guideId)
+        {
+            try
+            {
+                var booking = await _bookingRepository.GetByIdAsync(bookingId);
+
+                if (booking == null)
+                {
+                    return new BaseResponse<BookingResponse>
+                    {
+                        Success = false,
+                        Message = "Booking not found"
+                    };
+                }
+
+                if (booking.Status == BookingStatus.Cancelled ||
+                    booking.Status == BookingStatus.Completed)
+                {
+                    return new BaseResponse<BookingResponse>
+                    {
+                        Success = false,
+                        Message = $"Cannot assign guide to {booking.Status} booking"
+                    };
+                }
+
+                if (!guideId.HasValue)
+                {
+                    booking.GuideId = null;
+                    await _bookingRepository.UpdateAsync(booking);
+
+                    var bookingWithDetails = await _bookingRepository.GetByIdWithDetailsAsync(bookingId);
+
+                    await LogAuditAsync(null, "GUIDE_REMOVED", "Booking", bookingId,
+                        $"Guide removed from booking: {booking.BookingCode}");
+
+                    return new BaseResponse<BookingResponse>
+                    {
+                        Success = true,
+                        Message = "Guide removed from booking successfully",
+                        Data = bookingWithDetails!.ToBookingResponse()
+                    };
+                }
+
+              
+                var availableGuides = await _tourService.GetAvailableGuidesForTourAsync(
+                    booking.TourId,
+                    booking.TourDate);
+
+                var selectedGuide = availableGuides.FirstOrDefault(g => g.GuideId == guideId.Value);
+
+                if (selectedGuide == null)
+                {
+                    return new BaseResponse<BookingResponse>
+                    {
+                        Success = false,
+                        Message = $"Guide with ID {guideId.Value} is not assigned to this tour"
+                    };
+                }
+
+                string warningMessage = "";
+                if (!selectedGuide.IsAvailable)
+                {
+                    warningMessage = $" Warning: Guide {selectedGuide.FullName} is not available on {booking.TourDate:yyyy-MM-dd}";
+                }
+
+                booking.GuideId = guideId.Value;
+                await _bookingRepository.UpdateAsync(booking);
+
+                var updatedBooking = await _bookingRepository.GetByIdWithDetailsAsync(bookingId);
+
+                await LogAuditAsync(null, "GUIDE_ASSIGNED", "Booking", bookingId,
+                    $"Guide {guideId.Value} assigned to booking: {booking.BookingCode}");
+
+                return new BaseResponse<BookingResponse>
+                {
+                    Success = true,
+                    Message = $"Guide assigned successfully.{warningMessage}",
+                    Data = updatedBooking!.ToBookingResponse()
+                };
+            }
+            catch (Exception ex)
+            {
+                return new BaseResponse<BookingResponse>
+                {
+                    Success = false,
+                    Message = $"Error assigning guide: {ex.Message}"
+                };
+            }
+        }
 
             #region Private Helper Methods
 

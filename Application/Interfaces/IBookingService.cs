@@ -25,5 +25,7 @@ namespace Application.Interfaces
         Task<BaseResponse<BookingResponse>> CancelAsync(int id, CancelBookingRequest request);
         Task<GuideAvailabilityListResponse> GetAvailableGuidesForBookingAsync(int tourId, DateTime tourDate);
         Task<BaseResponse> DeleteAsync(int id);
+        Task<BaseResponse<BookingResponse>> AssignGuideAsync(int bookingId, int? guideId);
+
     }
 }
