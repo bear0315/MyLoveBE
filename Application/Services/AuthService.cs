@@ -51,12 +51,12 @@ namespace Application.Services
                     return AuthMapper.ToFailedLoginResponse("Invalid email or password");
                 }
 
-                if (user.Status != UserStatus.Active)
-                {
-                    await LogAuditAsync(user.Id, "LOGIN_BLOCKED", "User", user.Id,
-                        $"Login blocked - Status: {user.Status}", request.IpAddress);
-                    return AuthMapper.ToFailedLoginResponse("Account is inactive or blocked");
-                }
+                //if (user.Status != UserStatus.Active)
+                //{
+                //    await LogAuditAsync(user.Id, "LOGIN_BLOCKED", "User", user.Id,
+                //        $"Login blocked - Status: {user.Status}", request.IpAddress);
+                //    return AuthMapper.ToFailedLoginResponse("Account is inactive or blocked");
+                //}
 
                 if (!VerifyPassword(request.Password, user.PasswordHash))
                 {
