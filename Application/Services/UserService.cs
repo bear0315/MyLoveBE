@@ -93,13 +93,22 @@ namespace Application.Services
             {
                 var query = _userRepository.GetAll();
 
-                // Filter by role
+                // Filter by role - FIXED
                 if (!string.IsNullOrEmpty(role))
                 {
-                    query = query.Where(u => u.Role.ToString().Equals(role, StringComparison.OrdinalIgnoreCase));
+                    // Try to parse as number first (0, 1, 2, 3, 4)
+                    if (int.TryParse(role, out int roleValue))
+                    {
+                        query = query.Where(u => (int)u.Role == roleValue);
+                    }
+                    // Otherwise parse as enum name (Customer, Guide, Staff, Manager, Admin)
+                    else if (Enum.TryParse<UserRole>(role, true, out var roleEnum))
+                    {
+                        query = query.Where(u => u.Role == roleEnum);
+                    }
                 }
 
-                // Filter by active status
+                // Filter by active status - FIXED
                 if (isActive.HasValue)
                 {
                     var status = isActive.Value ? UserStatus.Active : UserStatus.Inactive;
@@ -158,14 +167,17 @@ namespace Application.Services
                     };
                 }
 
-                // Parse role
                 if (!Enum.TryParse<UserRole>(request.Role, true, out var userRole))
                 {
-                    return new BaseResponse<UserResponse>
+                    if (!int.TryParse(request.Role, out int roleInt) || !Enum.IsDefined(typeof(UserRole), roleInt))
                     {
-                        Success = false,
-                        Message = "Invalid role"
-                    };
+                        return new BaseResponse<UserResponse>
+                        {
+                            Success = false,
+                            Message = "Invalid role"
+                        };
+                    }
+                    userRole = (UserRole)roleInt;
                 }
 
                 // Create user entity

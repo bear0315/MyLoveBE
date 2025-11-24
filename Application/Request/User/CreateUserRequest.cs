@@ -30,6 +30,6 @@ namespace Application.Request.User
         public string? Avatar { get; set; }
 
         [Required]
-        public string Role { get; set; } = "Customer";
+        public string Role { get; set; }
     }
 }
