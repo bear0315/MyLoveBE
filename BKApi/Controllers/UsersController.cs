@@ -387,6 +387,54 @@ namespace BKApi.Controllers
             }
         }
 
+        [HttpPost("register")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(BaseResponse<UserResponse>), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Register([FromBody] RegisterUserRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new BaseResponse
+                    {
+                        Success = false,
+                        Message = "Invalid input data: " + string.Join(", ", ModelState.Values
+                            .SelectMany(v => v.Errors.Select(e => e.ErrorMessage)))
+                    });
+                }
+
+                var createRequest = new CreateUserRequest
+                {
+                    FullName = request.FullName,
+                    Email = request.Email,
+                    PhoneNumber = request.PhoneNumber,
+                    Password = request.Password,
+                    Role = "Customer", 
+                   
+                };
+
+                var response = await _userService.CreateAsync(createRequest);
+
+                if (!response.Success)
+                {
+                    return BadRequest(response);
+                }
+
+                return CreatedAtAction(nameof(GetById), new { id = response.Data?.Id }, response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error registering user");
+                return StatusCode(StatusCodes.Status500InternalServerError, new BaseResponse
+                {
+                    Success = false,
+                    Message = "An error occurred while registering user"
+                });
+            }
+        }
+
         #region Helper Methods
 
         private int GetCurrentUserId()
