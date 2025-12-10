@@ -2,9 +2,6 @@
 using Domain.Entities.Enums;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Domain.Entities
 {
@@ -14,6 +11,12 @@ namespace Domain.Entities
         public int UserId { get; set; }
         public int TourId { get; set; }
         public int? GuideId { get; set; }
+
+        /// <summary>
+        /// ID của ngày khởi hành cụ thể (nếu tour sử dụng TourDeparture)
+        /// Null = booking theo kiểu cũ (chỉ dùng TourDate)
+        /// </summary>
+        public int? TourDepartureId { get; set; }
 
         // Booking Details
         public DateTime TourDate { get; set; }
@@ -37,14 +40,17 @@ namespace Domain.Entities
         public DateTime? CancelledAt { get; set; }
         public string? CancellationReason { get; set; }
         public decimal? RefundAmount { get; set; }
-        
-        // noi bang 
+
+        // Navigation properties
         public User User { get; set; } = null!;
         public Tour Tour { get; set; } = null!;
         public Guide? Guide { get; set; }
-        public ICollection<BookingGuest> Guests { get; set; } = new List<BookingGuest>();
-        public Review? TourReview { get; set; } 
-        public GuideReview? GuideReview { get; set; } 
-    }
 
+        public TourDeparture? TourDeparture { get; set; }
+ 
+
+        public ICollection<BookingGuest> Guests { get; set; } = new List<BookingGuest>();
+        public Review? TourReview { get; set; }
+        public GuideReview? GuideReview { get; set; }
+    }
 }

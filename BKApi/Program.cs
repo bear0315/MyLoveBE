@@ -42,6 +42,8 @@ builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 // Booking Repositories
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IBookingGuestRepository, BookingGuestRepository>();
+builder.Services.AddScoped<ITourDepartureRepository, TourDepartureRepository>();    
+
 
 // ==================== SERVICES ====================
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -56,6 +58,8 @@ builder.Services.AddScoped<IGuideService, GuideService>();
 // Booking & Payment Services
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IVnPayService, VnPayService>();
+builder.Services.AddScoped<ITourDepartureService, TourDepartureService>();
+
 
 var jwtSettings = builder.Configuration.GetSection("JWT");
 var secretKey = jwtSettings["SecretKey"]

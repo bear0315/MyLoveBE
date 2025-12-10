@@ -1,4 +1,5 @@
 ﻿using Application.Response.Booking;
+using Application.Response.Booking.Application.Response.Booking;
 using Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -19,16 +20,39 @@ namespace Application.Mappings
                 BookingCode = booking.BookingCode,
                 UserId = booking.UserId,
                 UserName = booking.User?.FullName ?? string.Empty,
+                UserEmail = booking.User?.Email ?? string.Empty,
 
+                // Tour info
                 TourId = booking.TourId,
                 TourName = booking.Tour?.Name ?? string.Empty,
                 TourLocation = booking.Tour?.Location ?? string.Empty,
+                TourImageUrl = booking.Tour?.Images?
+                    .FirstOrDefault(i => i.IsPrimary)?.ImageUrl,
 
+                // ============ TourDeparture info ============
+                TourDepartureId = booking.TourDepartureId,
+                DepartureInfo = booking.TourDeparture != null ? new DepartureInfoDto
+                {
+                    Id = booking.TourDeparture.Id,
+                    DepartureDate = booking.TourDeparture.DepartureDate,
+                    EndDate = booking.TourDeparture.EndDate,
+                    MaxGuests = booking.TourDeparture.MaxGuests,
+                    BookedGuests = booking.TourDeparture.BookedGuests,
+                    AvailableSlots = booking.TourDeparture.AvailableSlots,
+                    SpecialPrice = booking.TourDeparture.SpecialPrice,
+                    Status = booking.TourDeparture.Status.ToString(),
+                    Notes = booking.TourDeparture.Notes
+                } : null,
+                // ===========================================
+
+                // Guide info
                 GuideId = booking.GuideId,
                 GuideName = booking.Guide?.FullName ?? string.Empty,
-                GuideEmail= booking.Guide?.Email ?? string.Empty,
-                GuidePhone =booking.Guide?.PhoneNumber ?? string.Empty,
+                GuideAvatar = booking.Guide?.Avatar,
+                GuideEmail = booking.Guide?.Email ?? string.Empty,
+                GuidePhone = booking.Guide?.PhoneNumber ?? string.Empty,
 
+                // Booking details
                 TourDate = booking.TourDate,
                 NumberOfGuests = booking.NumberOfGuests,
                 TotalAmount = booking.TotalAmount,
@@ -57,6 +81,7 @@ namespace Application.Mappings
                     .ToList()
                     ?? new List<BookingGuestResponse>(),
 
+                // Timestamps
                 CreatedAt = booking.CreatedAt,
                 UpdatedAt = booking.UpdatedAt
             };

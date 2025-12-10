@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Application.Response.Booking.Application.Response.Booking;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,6 +15,6 @@ namespace Application.Response.Booking
         public int TotalCount { get; set; }
         public int Page { get; set; }
         public int PageSize { get; set; }
-        public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 0;
+        public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
     }
 }

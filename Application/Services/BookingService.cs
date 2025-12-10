@@ -13,6 +13,8 @@ using System.Threading.Tasks;
 using Application.Mappings;
 using Microsoft.EntityFrameworkCore;
 using Application.Response.Guide;
+using Application.Response.Booking.Application.Response.Booking;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace Application.Services
 {
@@ -24,6 +26,7 @@ namespace Application.Services
         private readonly ITourRepository _tourRepository;
         private readonly IAuditLogRepository _auditLogRepository;
         private readonly ITourGuideRepository _tourGuideRepository;  
+        private readonly ITourDepartureRepository _tourDepartureRepository;
         private readonly ITourService _tourService;
 
         public BookingService(
@@ -33,7 +36,7 @@ namespace Application.Services
            ITourRepository tourRepository,
            IAuditLogRepository auditLogRepository,
            ITourGuideRepository tourGuideRepository,  
-           ITourService tourService)  
+           ITourService tourService, ITourDepartureRepository _tourDepartureRepository)  
         {
             _bookingRepository = bookingRepository;
             _guestRepository = guestRepository;
@@ -41,8 +44,10 @@ namespace Application.Services
             _tourRepository = tourRepository;
             _auditLogRepository = auditLogRepository;
             _tourGuideRepository = tourGuideRepository;  
-            _tourService = tourService; 
+            _tourService = tourService;
+            this._tourDepartureRepository = _tourDepartureRepository;
         }
+    
 
         public async Task<BaseResponse<BookingResponse>> GetByIdAsync(int id)
         {
@@ -301,23 +306,133 @@ namespace Application.Services
                     };
                 }
 
-                // Check availability
-                var existingGuests = await _bookingRepository.GetTotalBookingsForTourOnDateAsync(request.TourId, request.TourDate);
-                if (existingGuests + request.NumberOfGuests > tour.MaxGuests)
+                // ============ LOGIC MỚI: Kiểm tra TourDeparture ============
+                TourDeparture? tourDeparture = null;
+                int? selectedDepartureId = null;
+
+                // Option 1: User chọn departure cụ thể (nếu có TourDepartureId trong request)
+                if (request.TourDepartureId.HasValue)
+                {
+                    tourDeparture = await _tourDepartureRepository.GetByIdAsync(request.TourDepartureId.Value);
+
+                    if (tourDeparture == null)
+                    {
+                        return new BaseResponse<BookingResponse>
+                        {
+                            Success = false,
+                            Message = "Selected departure not found"
+                        };
+                    }
+
+                    if (tourDeparture.TourId != request.TourId)
+                    {
+                        return new BaseResponse<BookingResponse>
+                        {
+                            Success = false,
+                            Message = "Departure does not belong to this tour"
+                        };
+                    }
+
+                    if (tourDeparture.Status == DepartureStatus.Full ||
+                        tourDeparture.Status == DepartureStatus.Cancelled)
+                    {
+                        return new BaseResponse<BookingResponse>
+                        {
+                            Success = false,
+                            Message = $"This departure is {tourDeparture.Status.ToString().ToLower()}"
+                        };
+                    }
+
+                    // Kiểm tra slot còn trống
+                    if (tourDeparture.AvailableSlots < request.NumberOfGuests)
+                    {
+                        return new BaseResponse<BookingResponse>
+                        {
+                            Success = false,
+                            Message = $"Not enough slots. Only {tourDeparture.AvailableSlots} slot(s) remaining"
+                        };
+                    }
+
+                    selectedDepartureId = tourDeparture.Id;
+                }
+                // Option 2: Tự động tìm departure theo TourDate (backward compatible)
+                else
+                {
+                    tourDeparture = await _tourDepartureRepository.GetByTourAndDateAsync(
+                        request.TourId,
+                        request.TourDate);
+
+                    if (tourDeparture != null)
+                    {
+                        // Tour này có dùng TourDeparture, kiểm tra availability
+                        if (tourDeparture.Status == DepartureStatus.Full ||
+                            tourDeparture.Status == DepartureStatus.Cancelled)
+                        {
+                            return new BaseResponse<BookingResponse>
+                            {
+                                Success = false,
+                                Message = $"No departure available on {request.TourDate:yyyy-MM-dd}"
+                            };
+                        }
+
+                        if (tourDeparture.AvailableSlots < request.NumberOfGuests)
+                        {
+                            return new BaseResponse<BookingResponse>
+                            {
+                                Success = false,
+                                Message = $"Not enough slots on {request.TourDate:yyyy-MM-dd}. Only {tourDeparture.AvailableSlots} slot(s) remaining"
+                            };
+                        }
+
+                        selectedDepartureId = tourDeparture.Id;
+                    }
+                    else
+                    {
+                        // Fallback: Kiểm tra theo cách cũ (dùng Tour.MaxGuests)
+                        var existingGuests = await _bookingRepository
+                            .GetTotalBookingsForTourOnDateAsync(request.TourId, request.TourDate);
+
+                        if (existingGuests + request.NumberOfGuests > tour.MaxGuests)
+                        {
+                            return new BaseResponse<BookingResponse>
+                            {
+                                Success = false,
+                                Message = $"Not enough availability. Only {tour.MaxGuests - existingGuests} spots left"
+                            };
+                        }
+                    }
+                }
+                // ============ KẾT THÚC LOGIC TourDeparture ============
+
+                // Parse payment method
+                if (!Enum.TryParse<PaymentMethod>(request.PaymentMethod, true, out var paymentMethod))
                 {
                     return new BaseResponse<BookingResponse>
                     {
                         Success = false,
-                        Message = $"Not enough availability. Only {tour.MaxGuests - existingGuests} spots left"
+                        Message = "Invalid payment method"
                     };
                 }
 
-                //  ============ XỬ LÝ GUIDE SELECTION ============
+                // ============ XỬ LÝ GUIDE SELECTION ============
                 int? selectedGuideId = null;
 
-                if (request.GuideId.HasValue)
+                // Ưu tiên 1: Guide từ TourDeparture (nếu có)
+                if (tourDeparture?.DefaultGuideId != null)
                 {
-                    // Option 1: User đã chọn guide cụ thể
+                    var isGuideAvailable = await _tourService.IsGuideAvailableAsync(
+                        tourDeparture.DefaultGuideId.Value,
+                        request.TourDate);
+
+                    if (isGuideAvailable)
+                    {
+                        selectedGuideId = tourDeparture.DefaultGuideId.Value;
+                    }
+                }
+
+                // Ưu tiên 2: User chọn guide cụ thể
+                if (!selectedGuideId.HasValue && request.GuideId.HasValue)
+                {
                     var availableGuides = await _tourService.GetAvailableGuidesForTourAsync(
                         request.TourId,
                         request.TourDate);
@@ -344,9 +459,9 @@ namespace Application.Services
 
                     selectedGuideId = request.GuideId.Value;
                 }
-                else
+                // Ưu tiên 3: Tự động chọn guide
+                else if (!selectedGuideId.HasValue)
                 {
-                    // Option 2: Tự động gán guide (priority: default guide available > first available guide)
                     var defaultGuideId = await _tourService.GetDefaultGuideIdForTourAsync(
                         request.TourId,
                         request.TourDate);
@@ -355,25 +470,14 @@ namespace Application.Services
                     {
                         selectedGuideId = defaultGuideId.Value;
                     }
-                    
                 }
-                //  ============ KẾT THÚC XỬ LÝ GUIDE ============
-
-                // Parse payment method
-                if (!Enum.TryParse<PaymentMethod>(request.PaymentMethod, true, out var paymentMethod))
-                {
-                    return new BaseResponse<BookingResponse>
-                    {
-                        Success = false,
-                        Message = "Invalid payment method"
-                    };
-                }
+                // ============ KẾT THÚC XỬ LÝ GUIDE ============
 
                 // Generate unique booking code
                 var bookingCode = await GenerateBookingCodeAsync();
 
-                // Calculate total amount
-                var totalAmount = tour.Price * request.NumberOfGuests;
+                var effectivePrice = tourDeparture?.SpecialPrice ?? tour.Price;
+                var totalAmount = effectivePrice * request.NumberOfGuests;
 
                 // Create booking
                 var booking = new Booking
@@ -381,7 +485,8 @@ namespace Application.Services
                     BookingCode = bookingCode,
                     UserId = userId,
                     TourId = request.TourId,
-                    GuideId = selectedGuideId,  
+                    TourDepartureId = selectedDepartureId,  
+                    GuideId = selectedGuideId,
                     TourDate = request.TourDate,
                     NumberOfGuests = request.NumberOfGuests,
                     TotalAmount = totalAmount,
@@ -395,6 +500,11 @@ namespace Application.Services
                 };
 
                 var createdBooking = await _bookingRepository.CreateAsync(booking);
+
+                if (selectedDepartureId.HasValue)
+                {
+                    await _tourDepartureRepository.UpdateBookedGuestsAsync(selectedDepartureId.Value);
+                }
 
                 // Create booking guests
                 if (request.Guests != null && request.Guests.Any())
@@ -420,10 +530,13 @@ namespace Application.Services
                 var bookingWithDetails = await _bookingRepository.GetByIdWithDetailsAsync(createdBooking.Id);
 
                 // Log audit
-                var guideName = selectedGuideId.HasValue ?
+                var departureInfo = selectedDepartureId.HasValue ?
+                    $", Departure ID: {selectedDepartureId.Value}" : "";
+                var guideInfo = selectedGuideId.HasValue ?
                     $", Guide ID: {selectedGuideId.Value}" : ", No guide assigned";
+
                 await LogAuditAsync(userId, "BOOKING_CREATED", "Booking", createdBooking.Id,
-                    $"Booking created: {bookingCode}{guideName}");
+                    $"Booking created: {bookingCode}{departureInfo}{guideInfo}");
 
                 return new BaseResponse<BookingResponse>
                 {
@@ -704,6 +817,13 @@ namespace Application.Services
                 }
 
                 var updatedBooking = await _bookingRepository.UpdateAsync(booking);
+
+                // ============ THÊM MỚI: Cập nhật TourDeparture stats ============
+                if (booking.TourDepartureId.HasValue)
+                {
+                    await _tourDepartureRepository.UpdateBookedGuestsAsync(booking.TourDepartureId.Value);
+                }
+                // ================================================================
 
                 // Load full booking details
                 var bookingWithDetails = await _bookingRepository.GetByIdWithDetailsAsync(id);

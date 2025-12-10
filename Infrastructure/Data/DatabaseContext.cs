@@ -35,6 +35,7 @@ namespace Infrastructure.Data
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<DailyStatistic> DailyStatistics { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<TourDeparture> TourDepartures { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -281,7 +282,73 @@ namespace Infrastructure.Data
             });
 
             // ===================================
-            // 8. BOOKING
+            // 8. TOUR DEPARTURE (NEW)
+            // ===================================
+
+            modelBuilder.Entity<TourDeparture>(entity =>
+            {
+                entity.ToTable("TourDepartures");
+                entity.HasKey(td => td.Id);
+
+                entity.Property(td => td.DepartureDate)
+                    .IsRequired();
+
+                entity.Property(td => td.EndDate)
+                    .IsRequired();
+
+                entity.Property(td => td.MaxGuests)
+                    .IsRequired();
+
+                entity.Property(td => td.BookedGuests)
+                    .IsRequired()
+                    .HasDefaultValue(0);
+
+                entity.Property(td => td.SpecialPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(td => td.Status)
+                    .IsRequired()
+                    .HasConversion<int>();
+
+                entity.Property(td => td.Notes)
+                    .HasMaxLength(500);
+
+                // Relationships
+                entity.HasOne(td => td.Tour)
+                    .WithMany()
+                    .HasForeignKey(td => td.TourId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(td => td.DefaultGuide)
+                    .WithMany()
+                    .HasForeignKey(td => td.DefaultGuideId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasMany(td => td.Bookings)
+                    .WithOne(b => b.TourDeparture)
+                    .HasForeignKey(b => b.TourDepartureId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Indexes
+                entity.HasIndex(td => td.TourId)
+                    .HasDatabaseName("IX_TourDepartures_TourId");
+
+                entity.HasIndex(td => td.DepartureDate)
+                    .HasDatabaseName("IX_TourDepartures_DepartureDate");
+
+                entity.HasIndex(td => td.Status)
+                    .HasDatabaseName("IX_TourDepartures_Status");
+
+                entity.HasIndex(td => new { td.TourId, td.DepartureDate })
+                    .HasDatabaseName("IX_TourDepartures_TourId_DepartureDate")
+                    .HasFilter("[IsDeleted] = 0");
+
+                // Query filter for soft delete
+                entity.HasQueryFilter(td => !td.IsDeleted);
+            });
+
+            // ===================================
+            // 9. BOOKING (UPDATED)
             // ===================================
 
             modelBuilder.Entity<Booking>(entity =>
@@ -302,6 +369,7 @@ namespace Infrastructure.Data
                 entity.HasIndex(e => e.UserId);
                 entity.HasIndex(e => e.TourId);
                 entity.HasIndex(e => e.GuideId);
+                entity.HasIndex(e => e.TourDepartureId); // NEW
                 entity.HasIndex(e => e.Status);
                 entity.HasIndex(e => e.PaymentStatus);
                 entity.HasIndex(e => e.TourDate);
@@ -320,6 +388,12 @@ namespace Infrastructure.Data
                 entity.HasOne(e => e.Guide)
                     .WithMany(g => g.Bookings)
                     .HasForeignKey(e => e.GuideId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // NEW: TourDeparture relationship
+                entity.HasOne(e => e.TourDeparture)
+                    .WithMany(td => td.Bookings)
+                    .HasForeignKey(e => e.TourDepartureId)
                     .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasQueryFilter(e => !e.IsDeleted);
@@ -343,7 +417,7 @@ namespace Infrastructure.Data
             });
 
             // ===================================
-            // 9. REVIEW (Tour Review)
+            // 10. REVIEW (Tour Review)
             // ===================================
 
             modelBuilder.Entity<Review>(entity =>
@@ -393,7 +467,7 @@ namespace Infrastructure.Data
             });
 
             // ===================================
-            // 10. GUIDE REVIEW
+            // 11. GUIDE REVIEW
             // ===================================
 
             modelBuilder.Entity<GuideReview>(entity =>
@@ -428,7 +502,7 @@ namespace Infrastructure.Data
             });
 
             // ===================================
-            // 11. FAVORITE
+            // 12. FAVORITE
             // ===================================
 
             modelBuilder.Entity<Favorite>(entity =>
@@ -451,7 +525,7 @@ namespace Infrastructure.Data
             });
 
             // ===================================
-            // 12. NOTIFICATION
+            // 13. NOTIFICATION
             // ===================================
 
             modelBuilder.Entity<Notification>(entity =>
@@ -474,7 +548,7 @@ namespace Infrastructure.Data
             });
 
             // ===================================
-            // 13. STATISTICS & AUDIT
+            // 14. STATISTICS & AUDIT
             // ===================================
 
             modelBuilder.Entity<DailyStatistic>(entity =>

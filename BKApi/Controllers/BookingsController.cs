@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces;
 using Application.Request.Booking;
 using Application.Response.Booking;
+using Application.Response.Booking.Application.Response.Booking;
 using Application.Response.Guide;
 using Application.Response.User;
 using Microsoft.AspNetCore.Authorization;

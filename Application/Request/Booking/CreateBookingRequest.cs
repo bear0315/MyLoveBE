@@ -12,12 +12,15 @@ namespace Application.Request.Booking
         [Required]
         public int TourId { get; set; }
 
+        public int? TourDepartureId { get; set; }
+
         [Required]
         public DateTime TourDate { get; set; }
 
         [Required]
         [Range(1, 100, ErrorMessage = "Number of guests must be between 1 and 100")]
         public int NumberOfGuests { get; set; }
+
         public int? GuideId { get; set; }
 
         [Required]
@@ -38,7 +41,7 @@ namespace Application.Request.Booking
         public string? SpecialRequests { get; set; }
 
         [Required]
-        public string PaymentMethod { get; set; } = string.Empty; // Cash, BankTransfer, CreditCard, MoMo, ZaloPay
+        public string PaymentMethod { get; set; } = string.Empty;
 
         public List<BookingGuestRequest> Guests { get; set; } = new();
     }
