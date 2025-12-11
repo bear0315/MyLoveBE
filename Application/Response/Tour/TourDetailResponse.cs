@@ -46,5 +46,9 @@ namespace Application.Response.Tour
         public List<TourGuideDto> Guides { get; set; } = new();
         public List<TagDto> Tags { get; set; } = new();
         public List<TourReviewDto> Reviews { get; set; } = new();
+
+        public List<TourDepartureDto> Departures { get; set; } = new();
     }
+
+    
 }

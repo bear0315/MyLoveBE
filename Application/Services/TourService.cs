@@ -26,6 +26,7 @@ namespace Application.Services
         private readonly ITourGuideRepository _tourGuideRepository;
         private readonly ITourTagRepository _tourTagRepository;
         private readonly IGuideRepository _guideRepository;
+        private readonly ITourDepartureRepository _departureRepository;
 
         public TourService(
             ITourRepository tourRepository,
@@ -36,8 +37,8 @@ namespace Application.Services
             ITourGuideRepository tourGuideRepository,
             ITourTagRepository tourTagRepository,
             IGuideRepository guideRepository,
-             IBookingRepository _bookingRepository
-            )
+            IBookingRepository bookingRepository,
+            ITourDepartureRepository departureRepository)
         {
             _tourRepository = tourRepository;
             _imageRepository = imageRepository;
@@ -47,18 +48,19 @@ namespace Application.Services
             _tourGuideRepository = tourGuideRepository;
             _tourTagRepository = tourTagRepository;
             _guideRepository = guideRepository;
+            _departureRepository = departureRepository;
         }
 
         public async Task<TourDetailResponse?> GetTourByIdAsync(int id)
         {
             var tour = await _tourRepository.GetTourDetailAsync(id);
-            return tour == null ? null : MapToDetailResponse(tour);
+            return tour == null ? null : await MapToDetailResponseAsync(tour);
         }
 
         public async Task<TourDetailResponse?> GetTourBySlugAsync(string slug)
         {
             var tour = await _tourRepository.GetTourBySlugAsync(slug);
-            return tour == null ? null : MapToDetailResponse(tour);
+            return tour == null ? null : await MapToDetailResponseAsync(tour);
         }
 
         public async Task<PagedResult<TourListResponse>> GetAllToursAsync(int pageNumber = 1, int pageSize = 10)
@@ -170,12 +172,11 @@ namespace Application.Services
                 await _excludeRepository.BulkAddAsync(excludes);
             }
 
-            // ===== IMPROVED: Add Guides with validation =====
+            // Add Guides with validation
             if (request.GuideIds != null && request.GuideIds.Any())
             {
-                // 1. Validate tất cả guides tồn tại
                 var validGuides = new List<int>();
-                foreach (var guideId in request.GuideIds.Distinct()) // Distinct để tránh duplicate
+                foreach (var guideId in request.GuideIds.Distinct())
                 {
                     var guide = await _guideRepository.GetByIdAsync(guideId);
                     if (guide != null)
@@ -189,11 +190,9 @@ namespace Application.Services
                     throw new ArgumentException("No valid guides found in the provided list");
                 }
 
-                // 2. Xác định default guide
                 int defaultGuideId;
                 if (request.DefaultGuideId.HasValue)
                 {
-                    // Kiểm tra DefaultGuideId có nằm trong GuideIds không
                     if (!validGuides.Contains(request.DefaultGuideId.Value))
                     {
                         throw new ArgumentException(
@@ -203,11 +202,9 @@ namespace Application.Services
                 }
                 else
                 {
-                    // Nếu không chọn, lấy guide đầu tiên làm default
                     defaultGuideId = validGuides.First();
                 }
 
-                // 3. Tạo TourGuide records
                 var tourGuides = validGuides.Select(guideId => new TourGuide
                 {
                     TourId = createdTour.Id,
@@ -229,7 +226,8 @@ namespace Application.Services
                 await _tourTagRepository.BulkAddAsync(tourTags);
             }
 
-            return (await GetTourByIdAsync(createdTour.Id))!;
+            var result = await GetTourByIdAsync(createdTour.Id);
+            return result!;
         }
 
         public async Task<TourDetailResponse> UpdateTourAsync(int id, UpdateTourRequest request)
@@ -333,15 +331,13 @@ namespace Application.Services
                 await _excludeRepository.BulkAddAsync(excludes);
             }
 
-            // ===== IMPROVED: Update Guides with validation =====
+            // Update Guides with validation
             if (request.GuideIds != null)
             {
-                // Delete existing guides
                 await _tourGuideRepository.BulkDeleteByTourIdAsync(id);
 
                 if (request.GuideIds.Any())
                 {
-                    // 1. Validate guides
                     var validGuides = new List<int>();
                     foreach (var guideId in request.GuideIds.Distinct())
                     {
@@ -357,7 +353,6 @@ namespace Application.Services
                         throw new ArgumentException("No valid guides found in the provided list");
                     }
 
-                    // 2. Determine default guide
                     int defaultGuideId;
                     if (request.DefaultGuideId.HasValue)
                     {
@@ -373,7 +368,6 @@ namespace Application.Services
                         defaultGuideId = validGuides.First();
                     }
 
-                    // 3. Create TourGuide records
                     var tourGuides = validGuides.Select(guideId => new TourGuide
                     {
                         TourId = id,
@@ -397,7 +391,8 @@ namespace Application.Services
                 await _tourTagRepository.BulkAddAsync(tourTags);
             }
 
-            return (await GetTourByIdAsync(id))!;
+            var result = await GetTourByIdAsync(id);
+            return result!;
         }
 
         public async Task<bool> DeleteTourAsync(int id)
@@ -515,6 +510,7 @@ namespace Application.Services
                 ActiveTours = activeTours,
             };
         }
+
         #region Guide Methods
 
         public async Task<List<AvailableGuideDto>> GetAvailableGuidesForTourAsync(int tourId, DateTime tourDate)
@@ -523,7 +519,6 @@ namespace Application.Services
             {
                 var checkDate = tourDate.Date;
 
-                // 1. Get all tour-guide assignments
                 var tourGuides = await _tourGuideRepository
                     .GetAll()
                     .Where(tg => tg.TourId == tourId)
@@ -540,7 +535,6 @@ namespace Application.Services
 
                 foreach (var tg in tourGuides)
                 {
-                    // 2. Get guide info
                     Guide guide;
                     if (tg.Guide != null)
                     {
@@ -552,10 +546,8 @@ namespace Application.Services
                         if (guide == null) continue;
                     }
 
-                    // 3. ✅ Check availability using repository method
                     bool isAvailable = await _tourGuideRepository.IsGuideAvailableAsync(tg.GuideId, checkDate);
 
-                    // 4. Build DTO
                     var dto = new AvailableGuideDto
                     {
                         GuideId = tg.GuideId,
@@ -567,8 +559,6 @@ namespace Application.Services
                         IsDefaultGuide = tg.IsDefault,
                         AverageRating = guide.AverageRating,
                         TotalReviews = guide.TotalReviews,
-
-                        // Nếu không available, hiển thị lý do chung
                         UnavailabilityReason = !isAvailable
                             ? $"Hướng dẫn viên đã có lịch vào ngày {checkDate:dd/MM/yyyy}"
                             : null,
@@ -590,12 +580,12 @@ namespace Application.Services
                 throw;
             }
         }
+
         public async Task<GuideDetailDto?> GetGuideDetailAsync(int guideId)
         {
             var guide = await _guideRepository.GetByIdAsync(guideId);
             if (guide == null) return null;
 
-            // Lấy tours của guide
             var tourGuides = await _tourGuideRepository.GetByGuideIdAsync(guideId);
 
             return new GuideDetailDto
@@ -629,12 +619,10 @@ namespace Application.Services
 
         public async Task<int?> GetDefaultGuideIdForTourAsync(int tourId, DateTime tourDate)
         {
-            // Lấy default guide
             var defaultGuide = await _tourGuideRepository.GetDefaultGuideForTourAsync(tourId);
 
             if (defaultGuide != null)
             {
-                // Kiểm tra available
                 var isAvailable = await _tourGuideRepository.IsGuideAvailableAsync(defaultGuide.GuideId, tourDate);
                 if (isAvailable)
                 {
@@ -642,7 +630,6 @@ namespace Application.Services
                 }
             }
 
-            // Nếu default guide không available, tìm guide available khác
             var availableGuides = await GetAvailableGuidesForTourAsync(tourId, tourDate);
             var firstAvailable = availableGuides.FirstOrDefault(g => g.IsAvailable);
 
@@ -651,22 +638,9 @@ namespace Application.Services
 
         #endregion
 
-        #region Helper Methods
+        #region Statistics & Availability Methods
 
-        private List<string> ParseLanguages(string? languages)
-        {
-            if (string.IsNullOrWhiteSpace(languages))
-                return new List<string>();
-
-            return languages.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                           .Select(l => l.Trim())
-                           .ToList();
-        }
-
-        #endregion
-    
-
-    public async Task UpdateTourStatisticsAsync(int tourId)
+        public async Task UpdateTourStatisticsAsync(int tourId)
         {
             await _tourRepository.UpdateTourStatisticsAsync(tourId);
         }
@@ -687,6 +661,10 @@ namespace Application.Services
             return dates.ToList();
         }
 
+        #endregion
+
+        #region Bulk Operations
+
         public async Task<bool> BulkUpdateStatusAsync(BulkUpdateStatusRequest request)
         {
             return await _tourRepository.BulkUpdateStatusAsync(request.TourIds, request.Status);
@@ -701,6 +679,10 @@ namespace Application.Services
         {
             return await _tourRepository.BulkDeleteAsync(tourIds);
         }
+
+        #endregion
+
+        #region Validation Methods
 
         public async Task<bool> IsTourExistsAsync(int id)
         {
@@ -721,7 +703,24 @@ namespace Application.Services
             return slug.Trim('-');
         }
 
-        // Mapping methods
+        #endregion
+
+        #region Helper Methods
+
+        private List<string> ParseLanguages(string? languages)
+        {
+            if (string.IsNullOrWhiteSpace(languages))
+                return new List<string>();
+
+            return languages.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                           .Select(l => l.Trim())
+                           .ToList();
+        }
+
+        #endregion
+
+        #region Mapping Methods
+
         private TourListResponse MapToListResponse(Tour tour)
         {
             return new TourListResponse
@@ -747,8 +746,13 @@ namespace Application.Services
             };
         }
 
-        private TourDetailResponse MapToDetailResponse(Tour tour)
+        private async Task<TourDetailResponse> MapToDetailResponseAsync(Tour tour)
         {
+            // Get available departures for this tour
+            var departures = await _departureRepository.GetAvailableDeparturesAsync(
+                tour.Id,
+                DateTime.UtcNow.Date);
+
             return new TourDetailResponse
             {
                 Id = tour.Id,
@@ -777,6 +781,7 @@ namespace Application.Services
                 MetaTitle = tour.MetaTitle,
                 MetaDescription = tour.MetaDescription,
                 CreatedAt = tour.CreatedAt,
+
                 Images = tour.Images.Select(i => new TourImageDto
                 {
                     Id = i.Id,
@@ -785,6 +790,7 @@ namespace Application.Services
                     IsPrimary = i.IsPrimary,
                     DisplayOrder = i.DisplayOrder
                 }).ToList(),
+
                 Itineraries = tour.Itineraries.Select(i => new TourItineraryDto
                 {
                     Id = i.Id,
@@ -795,18 +801,21 @@ namespace Application.Services
                     Meals = i.Meals,
                     Accommodation = i.Accommodation
                 }).ToList(),
+
                 Includes = tour.Includes.Select(i => new TourIncludeDto
                 {
                     Id = i.Id,
                     Item = i.Item,
                     DisplayOrder = i.DisplayOrder
                 }).ToList(),
+
                 Excludes = tour.Excludes.Select(e => new TourExcludeDto
                 {
                     Id = e.Id,
                     Item = e.Item,
                     DisplayOrder = e.DisplayOrder
                 }).ToList(),
+
                 Guides = tour.TourGuides.Select(tg => new TourGuideDto
                 {
                     GuideId = tg.GuideId,
@@ -815,11 +824,13 @@ namespace Application.Services
                     GuideRating = tg.Guide?.AverageRating ?? 0,
                     IsDefault = tg.IsDefault
                 }).ToList(),
+
                 Tags = tour.TourTags.Select(tt => new TagDto
                 {
                     Id = tt.TagId,
                     Name = tt.Tag?.Name ?? ""
                 }).ToList(),
+
                 Reviews = tour.Reviews.Select(r => new TourReviewDto
                 {
                     Id = r.Id,
@@ -829,8 +840,27 @@ namespace Application.Services
                     Title = r.Title,
                     Comment = r.Comment,
                     CreatedAt = r.CreatedAt
+                }).ToList(),
+
+                // Map departures
+                Departures = departures.Select(d => new TourDepartureDto
+                {
+                    Id = d.Id,
+                    DepartureDate = d.DepartureDate,
+                    EndDate = d.EndDate,
+                    MaxGuests = d.MaxGuests,
+                    BookedGuests = d.BookedGuests,
+                    AvailableSlots = d.AvailableSlots,
+                    Price = d.SpecialPrice ?? tour.Price,
+                    HasSpecialPrice = d.SpecialPrice.HasValue,
+                    Status = d.Status.ToString(),
+                    Notes = d.Notes,
+                    DefaultGuideId = d.DefaultGuideId,
+                    DefaultGuideName = d.DefaultGuide?.FullName ?? d.DefaultGuide?.User?.FullName
                 }).ToList()
             };
         }
+
+        #endregion
     }
 }

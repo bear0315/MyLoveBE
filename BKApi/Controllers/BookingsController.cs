@@ -582,6 +582,47 @@ namespace BKApi.Controllers
                     });
             }
         }
+        /// <summary>
+        /// Update payment status (Admin only)
+        /// </summary>
+        [HttpPatch("{id}/payment")]
+        [Authorize(Roles = "Admin")]
+        [ProducesResponseType(typeof(BaseResponse<BookingResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> UpdatePayment(int id, [FromBody] UpdatePaymentRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new BaseResponse<BookingResponse>
+                    {
+                        Success = false,
+                        Message = "Invalid input data"
+                    });
+                }
+
+                var response = await _bookingService.UpdatePaymentAsync(id, request);
+
+                if (!response.Success)
+                {
+                    return BadRequest(response);
+                }
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating payment for booking: {Id}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new BaseResponse<BookingResponse>
+                    {
+                        Success = false,
+                        Message = "An error occurred while updating payment"
+                    });
+            }
+        }
 
         /// <summary>
         /// Remove guide from booking (Admin only)
