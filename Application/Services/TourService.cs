@@ -26,7 +26,6 @@ namespace Application.Services
         private readonly ITourGuideRepository _tourGuideRepository;
         private readonly ITourTagRepository _tourTagRepository;
         private readonly IGuideRepository _guideRepository;
-        private readonly IBookingRepository _bookingRepository;
 
         public TourService(
             ITourRepository tourRepository,
@@ -48,7 +47,6 @@ namespace Application.Services
             _tourGuideRepository = tourGuideRepository;
             _tourTagRepository = tourTagRepository;
             _guideRepository = guideRepository;
-            _bookingRepository = _bookingRepository;
         }
 
         public async Task<TourDetailResponse?> GetTourByIdAsync(int id)
@@ -511,12 +509,10 @@ namespace Application.Services
             var totalTours = await _tourRepository.CountAsync();
             var activeTours = await _tourRepository.GetTotalActiveToursAsync();
 
-            // This would need additional repository methods
             return new TourStatisticsDto
             {
                 TotalTours = totalTours,
                 ActiveTours = activeTours,
-                // Add other stats as needed
             };
         }
         #region Guide Methods
