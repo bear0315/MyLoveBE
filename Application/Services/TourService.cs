@@ -93,7 +93,6 @@ namespace Application.Services
             {
                 Name = request.Name,
                 Description = request.Description,
-                DestinationId = request.DestinationId,
                 Location = request.Location,
                 Price = request.Price,
                 Duration = request.Duration,
@@ -256,7 +255,6 @@ namespace Application.Services
             // Update tour properties
             tour.Name = request.Name;
             tour.Description = request.Description;
-            tour.DestinationId = request.DestinationId;
             tour.Location = request.Location;
             tour.Price = request.Price;
             tour.Duration = request.Duration;
@@ -761,7 +759,6 @@ namespace Application.Services
                 Name = tour.Name,
                 Description = tour.Description,
                 Slug = tour.Slug,
-                DestinationId = tour.DestinationId,
                 DestinationName = tour.Destination?.Name ?? "",
                 Location = tour.Location,
                 Price = tour.Price,
