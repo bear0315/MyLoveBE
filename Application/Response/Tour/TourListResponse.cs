@@ -14,6 +14,7 @@ namespace Application.Response.Tour
         public string Slug { get; set; } = string.Empty;
         public string Location { get; set; } = string.Empty;
         public decimal Price { get; set; }
+        public int MaxGuests { get; set; }
         public string Duration { get; set; } = string.Empty;
         public int DurationDays { get; set; }
         public TourType Type { get; set; }

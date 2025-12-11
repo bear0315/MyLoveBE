@@ -737,6 +737,7 @@ namespace Application.Services
                 Slug = tour.Slug,
                 Location = tour.Location,
                 Price = tour.Price,
+                MaxGuests = tour.MaxGuests,
                 Duration = tour.Duration,
                 DurationDays = tour.DurationDays,
                 Type = tour.Type,
