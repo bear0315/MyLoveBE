@@ -36,6 +36,8 @@ namespace Infrastructure.Data
         public DbSet<DailyStatistic> DailyStatistics { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<TourDeparture> TourDepartures { get; set; }
+        public DbSet<PointsHistory> PointsHistories { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -557,6 +559,37 @@ namespace Infrastructure.Data
                 entity.HasIndex(e => e.Date).IsUnique();
                 entity.Property(e => e.TotalRevenue).HasPrecision(18, 2);
 
+                entity.HasQueryFilter(e => !e.IsDeleted);
+            });
+            modelBuilder.Entity<PointsHistory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.TransactionType)
+                      .HasMaxLength(50)
+                      .IsRequired();
+
+                entity.Property(e => e.Points)
+                      .IsRequired();
+
+                entity.Property(e => e.Description)
+                      .HasMaxLength(1000);
+
+                entity.Property(e => e.BookingCode)
+                      .HasMaxLength(50);
+
+                // Relationship -> User
+                entity.HasOne(e => e.User)
+                      .WithMany(u => u.PointsHistories) // requires thêm property ở User (bên dưới)
+                      .HasForeignKey(e => e.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Indexes
+                entity.HasIndex(e => e.UserId);
+                entity.HasIndex(e => e.TransactionType);
+                entity.HasIndex(e => e.BookingCode);
+
+                // Query filter for soft delete (nếu BaseEntity có IsDeleted)
                 entity.HasQueryFilter(e => !e.IsDeleted);
             });
 

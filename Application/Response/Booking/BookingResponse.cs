@@ -64,6 +64,11 @@ namespace Application.Response.Booking
 
             // Guests
             public List<BookingGuestResponse> Guests { get; set; } = new();
+            public int PointsRedeemed { get; set; }
+            public decimal PointsDiscount { get; set; }
+            public decimal MemberDiscount { get; set; }  
+            public decimal OriginalAmount { get; set; }  
+
 
             // Timestamps
             public DateTime CreatedAt { get; set; }

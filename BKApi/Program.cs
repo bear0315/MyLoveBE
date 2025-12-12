@@ -43,6 +43,7 @@ builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IBookingGuestRepository, BookingGuestRepository>();
 builder.Services.AddScoped<ITourDepartureRepository, TourDepartureRepository>();    
+builder.Services.AddScoped<IPointsHistoryRepository, PointsHistoryRepository>();    
 
 
 // ==================== SERVICES ====================
@@ -59,6 +60,7 @@ builder.Services.AddScoped<IGuideService, GuideService>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IVnPayService, VnPayService>();
 builder.Services.AddScoped<ITourDepartureService, TourDepartureService>();
+builder.Services.AddScoped<ILoyaltyService, LoyaltyService>();
 
 
 var jwtSettings = builder.Configuration.GetSection("JWT");

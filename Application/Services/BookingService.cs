@@ -28,6 +28,8 @@ namespace Application.Services
         private readonly ITourGuideRepository _tourGuideRepository;  
         private readonly ITourDepartureRepository _tourDepartureRepository;
         private readonly ITourService _tourService;
+        private readonly ILoyaltyService _loyaltyService;
+
 
         public BookingService(
            IBookingRepository bookingRepository,
@@ -36,7 +38,7 @@ namespace Application.Services
            ITourRepository tourRepository,
            IAuditLogRepository auditLogRepository,
            ITourGuideRepository tourGuideRepository,  
-           ITourService tourService, ITourDepartureRepository _tourDepartureRepository)  
+           ITourService tourService, ITourDepartureRepository _tourDepartureRepository, ILoyaltyService loyaltyService)  
         {
             _bookingRepository = bookingRepository;
             _guestRepository = guestRepository;
@@ -46,6 +48,8 @@ namespace Application.Services
             _tourGuideRepository = tourGuideRepository;  
             _tourService = tourService;
             this._tourDepartureRepository = _tourDepartureRepository;
+            _loyaltyService = loyaltyService;
+
         }
     
 
@@ -265,25 +269,25 @@ namespace Application.Services
         {
             try
             {
-                // Validate user exists
+                // ==================== VALIDATE USER ====================
                 var user = await _userRepository.GetByIdAsync(userId);
                 if (user == null)
                 {
                     return new BaseResponse<BookingResponse>
                     {
                         Success = false,
-                        Message = "User not found"
+                        Message = "Không tìm thấy người dùng"
                     };
                 }
 
-                // Validate tour exists and is available
+                // ==================== VALIDATE TOUR ====================
                 var tour = await _tourRepository.GetByIdAsync(request.TourId);
                 if (tour == null)
                 {
                     return new BaseResponse<BookingResponse>
                     {
                         Success = false,
-                        Message = "Tour not found"
+                        Message = "Không tìm thấy tour"
                     };
                 }
 
@@ -292,21 +296,21 @@ namespace Application.Services
                     return new BaseResponse<BookingResponse>
                     {
                         Success = false,
-                        Message = "Tour is not available for booking"
+                        Message = "Tour hiện không khả dụng để đặt"
                     };
                 }
 
-                // Check tour date is in the future
+                // ==================== VALIDATE TOUR DATE ====================
                 if (request.TourDate.Date < DateTime.UtcNow.Date)
                 {
                     return new BaseResponse<BookingResponse>
                     {
                         Success = false,
-                        Message = "Tour date must be in the future"
+                        Message = "Ngày tour phải trong tương lai"
                     };
                 }
 
-                // ============ LOGIC MỚI: Kiểm tra TourDeparture ============
+                // ==================== XỬ LÝ TOUR DEPARTURE ====================
                 TourDeparture? tourDeparture = null;
                 int? selectedDepartureId = null;
 
@@ -320,7 +324,7 @@ namespace Application.Services
                         return new BaseResponse<BookingResponse>
                         {
                             Success = false,
-                            Message = "Selected departure not found"
+                            Message = "Không tìm thấy chuyến khởi hành"
                         };
                     }
 
@@ -329,7 +333,7 @@ namespace Application.Services
                         return new BaseResponse<BookingResponse>
                         {
                             Success = false,
-                            Message = "Departure does not belong to this tour"
+                            Message = "Chuyến khởi hành không thuộc tour này"
                         };
                     }
 
@@ -339,17 +343,16 @@ namespace Application.Services
                         return new BaseResponse<BookingResponse>
                         {
                             Success = false,
-                            Message = $"This departure is {tourDeparture.Status.ToString().ToLower()}"
+                            Message = $"Chuyến khởi hành đã {(tourDeparture.Status == DepartureStatus.Full ? "đầy chỗ" : "bị hủy")}"
                         };
                     }
 
-                    // Kiểm tra slot còn trống
                     if (tourDeparture.AvailableSlots < request.NumberOfGuests)
                     {
                         return new BaseResponse<BookingResponse>
                         {
                             Success = false,
-                            Message = $"Not enough slots. Only {tourDeparture.AvailableSlots} slot(s) remaining"
+                            Message = $"Không đủ chỗ. Chỉ còn {tourDeparture.AvailableSlots} chỗ"
                         };
                     }
 
@@ -370,7 +373,7 @@ namespace Application.Services
                             return new BaseResponse<BookingResponse>
                             {
                                 Success = false,
-                                Message = $"No departure available on {request.TourDate:yyyy-MM-dd}"
+                                Message = $"Không có chuyến khởi hành vào ngày {request.TourDate:dd/MM/yyyy}"
                             };
                         }
 
@@ -379,7 +382,7 @@ namespace Application.Services
                             return new BaseResponse<BookingResponse>
                             {
                                 Success = false,
-                                Message = $"Not enough slots on {request.TourDate:yyyy-MM-dd}. Only {tourDeparture.AvailableSlots} slot(s) remaining"
+                                Message = $"Không đủ chỗ vào ngày {request.TourDate:dd/MM/yyyy}. Chỉ còn {tourDeparture.AvailableSlots} chỗ"
                             };
                         }
 
@@ -396,25 +399,83 @@ namespace Application.Services
                             return new BaseResponse<BookingResponse>
                             {
                                 Success = false,
-                                Message = $"Not enough availability. Only {tour.MaxGuests - existingGuests} spots left"
+                                Message = $"Không đủ chỗ. Chỉ còn {tour.MaxGuests - existingGuests} chỗ"
                             };
                         }
                     }
                 }
 
-                // Parse payment method
+                // ==================== VALIDATE PAYMENT METHOD ====================
                 if (!Enum.TryParse<PaymentMethod>(request.PaymentMethod, true, out var paymentMethod))
                 {
                     return new BaseResponse<BookingResponse>
                     {
                         Success = false,
-                        Message = "Invalid payment method"
+                        Message = "Phương thức thanh toán không hợp lệ"
                     };
                 }
 
-                // ============ XỬ LÝ GUIDE SELECTION ============
+                // ==================== TÍNH GIÁ GỐC ====================
+                var effectivePrice = tourDeparture?.SpecialPrice ?? tour.Price;
+                var originalAmount = effectivePrice * request.NumberOfGuests; // VND
+
+                // ==================== GIẢM GIÁ HẠNG THÀNH VIÊN ====================
+                var memberDiscount = _loyaltyService.CalculateDiscount(originalAmount, user.MemberTier);
+                var amountAfterMemberDiscount = originalAmount - memberDiscount;
+
+                // ==================== XỬ LÝ ĐỔI ĐIỂM ====================
+                decimal pointsDiscount = 0;
+                int pointsRedeemed = 0;
+
+                if (request.PointsToRedeem.HasValue && request.PointsToRedeem.Value > 0)
+                {
+                    // Validate 1: Điểm phải là bội số của 100
+                    if (request.PointsToRedeem.Value % 100 != 0)
+                    {
+                        return new BaseResponse<BookingResponse>
+                        {
+                            Success = false,
+                            Message = "Số điểm đổi phải là bội số của 100 (100 điểm = 1,000 VND)"
+                        };
+                    }
+
+                    // Validate 2: Điểm có đủ không
+                    if (user.LoyaltyPoints < request.PointsToRedeem.Value)
+                    {
+                        return new BaseResponse<BookingResponse>
+                        {
+                            Success = false,
+                            Message = $"Không đủ điểm. Bạn có {user.LoyaltyPoints:N0} điểm"
+                        };
+                    }
+
+                    // Validate 3: Không vượt quá 50% giá trị booking
+                    var maxPoints = _loyaltyService.CalculateMaxRedeemablePoints(amountAfterMemberDiscount);
+                    if (request.PointsToRedeem.Value > maxPoints)
+                    {
+                        var maxValue = maxPoints * 10; // 100 points = 1,000 VND
+                        return new BaseResponse<BookingResponse>
+                        {
+                            Success = false,
+                            Message = $"Tối đa {maxPoints:N0} điểm (50% giá trị booking = {maxValue:N0} VND)"
+                        };
+                    }
+
+                    // Chuyển đổi điểm thành tiền: 100 points = 1,000 VND
+                    pointsDiscount = await _loyaltyService.ConvertPointsToMoneyAsync(
+                        userId,
+                        request.PointsToRedeem.Value);
+
+                    pointsRedeemed = request.PointsToRedeem.Value;
+                }
+
+                // ==================== TÍNH TỔNG GIÁ CUỐI CÙNG ====================
+                var totalAmount = amountAfterMemberDiscount - pointsDiscount;
+
+                // ==================== XỬ LÝ GUIDE SELECTION ====================
                 int? selectedGuideId = null;
 
+                // Priority 1: Default guide của departure (nếu có)
                 if (tourDeparture?.DefaultGuideId != null)
                 {
                     var isGuideAvailable = await _tourService.IsGuideAvailableAsync(
@@ -427,6 +488,7 @@ namespace Application.Services
                     }
                 }
 
+                // Priority 2: Guide do khách chọn
                 if (!selectedGuideId.HasValue && request.GuideId.HasValue)
                 {
                     var availableGuides = await _tourService.GetAvailableGuidesForTourAsync(
@@ -440,7 +502,7 @@ namespace Application.Services
                         return new BaseResponse<BookingResponse>
                         {
                             Success = false,
-                            Message = $"Guide with ID {request.GuideId.Value} is not assigned to this tour"
+                            Message = $"Hướng dẫn viên ID {request.GuideId.Value} không được phân công cho tour này"
                         };
                     }
 
@@ -449,12 +511,13 @@ namespace Application.Services
                         return new BaseResponse<BookingResponse>
                         {
                             Success = false,
-                            Message = $"Guide {selectedGuide.FullName} is not available on {request.TourDate:yyyy-MM-dd}"
+                            Message = $"Hướng dẫn viên {selectedGuide.FullName} không khả dụng vào ngày {request.TourDate:dd/MM/yyyy}"
                         };
                     }
 
                     selectedGuideId = request.GuideId.Value;
                 }
+                // Priority 3: Default guide của tour
                 else if (!selectedGuideId.HasValue)
                 {
                     var defaultGuideId = await _tourService.GetDefaultGuideIdForTourAsync(
@@ -467,13 +530,10 @@ namespace Application.Services
                     }
                 }
 
-                // Generate unique booking code
+                // ==================== TẠO BOOKING CODE ====================
                 var bookingCode = await GenerateBookingCodeAsync();
 
-                var effectivePrice = tourDeparture?.SpecialPrice ?? tour.Price;
-                var totalAmount = effectivePrice * request.NumberOfGuests;
-
-                // Create booking với status Pending và PaymentStatus Pending
+                // ==================== TẠO BOOKING ====================
                 var booking = new Booking
                 {
                     BookingCode = bookingCode,
@@ -484,21 +544,20 @@ namespace Application.Services
                     TourDate = request.TourDate,
                     NumberOfGuests = request.NumberOfGuests,
                     TotalAmount = totalAmount,
-                    Status = BookingStatus.Pending,  // Chưa xác nhận
-                    PaymentStatus = PaymentStatus.Pending,  // Chưa thanh toán
+                    Status = BookingStatus.Pending,
+                    PaymentStatus = PaymentStatus.Pending,
                     PaymentMethod = paymentMethod,
                     CustomerName = request.CustomerName,
                     CustomerEmail = request.CustomerEmail,
                     CustomerPhone = request.CustomerPhone,
-                    SpecialRequests = request.SpecialRequests
+                    SpecialRequests = request.SpecialRequests,
+                    PointsRedeemed = pointsRedeemed,
+                    PointsDiscount = pointsDiscount
                 };
 
                 var createdBooking = await _bookingRepository.CreateAsync(booking);
 
-                // KHÔNG TRỪ SLOT KHI TẠO BOOKING PENDING
-                // Chỉ trừ slot khi thanh toán thành công hoặc xác nhận
-
-                // Create booking guests
+                // ==================== TẠO BOOKING GUESTS ====================
                 if (request.Guests != null && request.Guests.Any())
                 {
                     foreach (var guestRequest in request.Guests)
@@ -518,21 +577,45 @@ namespace Application.Services
                     }
                 }
 
-                // Load full booking details
+                // ==================== LOAD BOOKING WITH DETAILS ====================
                 var bookingWithDetails = await _bookingRepository.GetByIdWithDetailsAsync(createdBooking.Id);
 
-                var departureInfo = selectedDepartureId.HasValue ?
-                    $", Departure ID: {selectedDepartureId.Value}" : "";
-                var guideInfo = selectedGuideId.HasValue ?
-                    $", Guide ID: {selectedGuideId.Value}" : ", No guide assigned";
+                // ==================== TẠO MESSAGE RESPONSE ====================
+                var message = "Đặt tour thành công! ";
+
+                if (memberDiscount > 0)
+                {
+                    message += $"Giảm giá thành viên {user.MemberTier}: {memberDiscount:N0} VND. ";
+                }
+
+                if (pointsDiscount > 0)
+                {
+                    message += $"Giảm giá điểm thưởng: {pointsDiscount:N0} VND ({pointsRedeemed:N0} điểm đã sử dụng). ";
+                }
+
+                message += $"Tổng thanh toán: {totalAmount:N0} VND";
+
+                // ==================== LOG AUDIT ====================
+                var departureInfo = selectedDepartureId.HasValue
+                    ? $", Departure ID: {selectedDepartureId.Value}"
+                    : "";
+
+                var guideInfo = selectedGuideId.HasValue
+                    ? $", Guide ID: {selectedGuideId.Value}"
+                    : ", No guide assigned";
+
+                var pointsInfo = pointsRedeemed > 0
+                    ? $", Points redeemed: {pointsRedeemed}"
+                    : "";
 
                 await LogAuditAsync(userId, "BOOKING_CREATED", "Booking", createdBooking.Id,
-                    $"Booking created: {bookingCode}{departureInfo}{guideInfo}");
+                    $"Booking created: {bookingCode}{departureInfo}{guideInfo}{pointsInfo}");
 
+                // ==================== RETURN RESPONSE ====================
                 return new BaseResponse<BookingResponse>
                 {
                     Success = true,
-                    Message = "Booking created successfully",
+                    Message = message,
                     Data = bookingWithDetails!.ToBookingResponse()
                 };
             }
@@ -541,7 +624,7 @@ namespace Application.Services
                 return new BaseResponse<BookingResponse>
                 {
                     Success = false,
-                    Message = $"Error creating booking: {ex.Message}"
+                    Message = $"Lỗi khi tạo booking: {ex.Message}"
                 };
             }
         }
@@ -639,7 +722,6 @@ namespace Application.Services
             try
             {
                 var booking = await _bookingRepository.GetByIdAsync(id);
-
                 if (booking == null)
                 {
                     return new BaseResponse<BookingResponse>
@@ -649,7 +731,6 @@ namespace Application.Services
                     };
                 }
 
-                // Parse status
                 if (!Enum.TryParse<BookingStatus>(request.Status, true, out var newBookingStatus))
                 {
                     return new BaseResponse<BookingResponse>
@@ -660,14 +741,28 @@ namespace Application.Services
                 }
 
                 var oldStatus = booking.Status;
-                var oldPaymentStatus = booking.PaymentStatus;
 
-                // === LOGIC QUẢN LÝ SLOT THEO TRẠNG THÁI ===
+                // === CỘNG ĐIỂM KHI TOUR HOÀN THÀNH (Completed) ===
+                if (newBookingStatus == BookingStatus.Completed && oldStatus != BookingStatus.Completed)
+                {
+                    // Chỉ cộng điểm nếu đã thanh toán (Paid hoặc PartiallyPaid)
+                    if (booking.PaymentStatus == PaymentStatus.Paid ||
+                        booking.PaymentStatus == PaymentStatus.PartiallyPaid)
+                    {
+                        var pointsEarned = await _loyaltyService.AddPointsAsync(
+                            booking.UserId,
+                            booking.TotalAmount,
+                            $"Tour completed - Booking {booking.BookingCode}");
 
-                // 1. Chuyển từ Pending → Confirmed (Xác nhận booking)
+                        // Ghi log để biết được cộng bao nhiêu điểm
+                        await LogAuditAsync(booking.UserId, "LOYALTY_POINTS_EARNED", "Booking", id,
+                            $"Earned {pointsEarned} points for completed tour. Booking: {booking.BookingCode}");
+                    }
+                }
+
+                // === XỬ LÝ SLOT (giữ nguyên logic cũ của bạn) ===
                 if (oldStatus == BookingStatus.Pending && newBookingStatus == BookingStatus.Confirmed)
                 {
-                    // Chỉ trừ slot nếu đã thanh toán
                     if (booking.PaymentStatus == PaymentStatus.Paid ||
                         booking.PaymentStatus == PaymentStatus.PartiallyPaid)
                     {
@@ -678,12 +773,8 @@ namespace Application.Services
                     }
                 }
 
-                // 2. Chuyển sang Cancelled hoặc NoShow → CỘNG lại slot (nếu đã trừ)
                 if (newBookingStatus == BookingStatus.Cancelled || newBookingStatus == BookingStatus.NoShow)
                 {
-                    // Chỉ cộng lại nếu:
-                    // - Booking đã Confirmed/Completed (đã trừ slot)
-                    // - VÀ đã thanh toán (Paid/PartiallyPaid/Refunded)
                     if ((oldStatus == BookingStatus.Confirmed || oldStatus == BookingStatus.Completed) &&
                         (booking.PaymentStatus == PaymentStatus.Paid ||
                          booking.PaymentStatus == PaymentStatus.PartiallyPaid ||
@@ -696,16 +787,14 @@ namespace Application.Services
                     }
                 }
 
-                // Update booking status
+                // Cập nhật trạng thái booking
                 booking.Status = newBookingStatus;
+                await _bookingRepository.UpdateAsync(booking);
 
-                var updatedBooking = await _bookingRepository.UpdateAsync(booking);
-
-                // Load full booking details
                 var bookingWithDetails = await _bookingRepository.GetByIdWithDetailsAsync(id);
 
                 await LogAuditAsync(booking.UserId, "BOOKING_STATUS_UPDATED", "Booking", id,
-                    $"Booking status changed from {oldStatus} to {newBookingStatus}: {booking.BookingCode}");
+                    $"Status changed from {oldStatus} → {newBookingStatus}: {booking.BookingCode}");
 
                 return new BaseResponse<BookingResponse>
                 {
@@ -758,19 +847,18 @@ namespace Application.Services
                     booking.RefundAmount = request.RefundAmount.Value;
                 }
 
-                // === LOGIC TRỪ SLOT KHI THANH TOÁN THÀNH CÔNG ===
-
-                // 1. Khi thanh toán thành công (Pending/Failed → Paid/PartiallyPaid)
+                // ========== CỘNG ĐIỂM KHI THANH TOÁN THÀNH CÔNG ==========
+                var pointsEarned = 0;
                 if ((newPaymentStatus == PaymentStatus.Paid || newPaymentStatus == PaymentStatus.PartiallyPaid) &&
                     (oldPaymentStatus != PaymentStatus.Paid && oldPaymentStatus != PaymentStatus.PartiallyPaid))
                 {
-                    // Tự động xác nhận booking nếu đang Pending
+                    // Tự động xác nhận booking
                     if (booking.Status == BookingStatus.Pending)
                     {
                         booking.Status = BookingStatus.Confirmed;
                     }
 
-                    // TRỪ SLOT: chỉ khi thanh toán thành công VÀ booking đã Confirmed
+                    // Trừ slot
                     if (booking.Status == BookingStatus.Confirmed || booking.Status == BookingStatus.Completed)
                     {
                         if (booking.TourDepartureId.HasValue)
@@ -778,13 +866,18 @@ namespace Application.Services
                             await _tourDepartureRepository.UpdateBookedGuestsAsync(booking.TourDepartureId.Value);
                         }
                     }
+
+                    // CỘNG ĐIỂM THƯỞNG
+                    pointsEarned = await _loyaltyService.AddPointsAsync(
+                        booking.UserId,
+                        booking.TotalAmount,
+                        $"Booking {booking.BookingCode}");
                 }
 
-                // 2. Khi chuyển sang Refunded/Failed từ Paid → CỘNG lại slot
+                // ========== TRỪ ĐIỂM NÊU REFUND ==========
                 if ((newPaymentStatus == PaymentStatus.Refunded || newPaymentStatus == PaymentStatus.Failed) &&
                     (oldPaymentStatus == PaymentStatus.Paid || oldPaymentStatus == PaymentStatus.PartiallyPaid))
                 {
-                    // Chỉ cộng lại nếu booking đã Confirmed/Completed (đã trừ slot)
                     if (booking.Status == BookingStatus.Confirmed || booking.Status == BookingStatus.Completed)
                     {
                         if (booking.TourDepartureId.HasValue)
@@ -792,10 +885,20 @@ namespace Application.Services
                             await _tourDepartureRepository.UpdateBookedGuestsAsync(booking.TourDepartureId.Value);
                         }
                     }
+
+                    // TRỪ ĐIỂM ĐÃ CỘNG (nếu cần)
+                    var pointsToDeduct = _loyaltyService.CalculatePointsEarned(booking.TotalAmount);
+                    await _loyaltyService.RedeemPointsAsync(booking.UserId, pointsToDeduct);
                 }
 
                 var updatedBooking = await _bookingRepository.UpdateAsync(booking);
                 var bookingWithDetails = await _bookingRepository.GetByIdWithDetailsAsync(id);
+
+                var message = "Payment updated successfully";
+                if (pointsEarned > 0)
+                {
+                    message += $". You earned {pointsEarned} loyalty points!";
+                }
 
                 await LogAuditAsync(booking.UserId, "BOOKING_PAYMENT_UPDATED", "Booking", id,
                     $"Payment status changed from {oldPaymentStatus} to {newPaymentStatus}: {booking.BookingCode}");
@@ -803,7 +906,7 @@ namespace Application.Services
                 return new BaseResponse<BookingResponse>
                 {
                     Success = true,
-                    Message = "Payment updated successfully",
+                    Message = message,
                     Data = bookingWithDetails!.ToBookingResponse()
                 };
             }

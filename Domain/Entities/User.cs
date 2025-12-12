@@ -19,6 +19,9 @@ namespace Domain.Entities
         public UserStatus Status { get; set; } = UserStatus.Active;
         public DateTime? LastLoginAt { get; set; }
         public DateTime MemberSince { get; set; } = DateTime.UtcNow;
+        public int LoyaltyPoints { get; set; } = 0;
+        public MemberTier MemberTier { get; set; } = MemberTier.Bronze;
+        public DateTime? LastTierUpdateAt { get; set; }
 
         public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
@@ -26,7 +29,9 @@ namespace Domain.Entities
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>(); 
-        public Guide? GuideProfile { get; set; } 
+        public Guide? GuideProfile { get; set; }
+        public ICollection<PointsHistory> PointsHistories { get; set; } = new List<PointsHistory>();
+
     }
 
 }

@@ -20,7 +20,9 @@ namespace Application.Request.Booking
         [Required]
         [Range(1, 100, ErrorMessage = "Number of guests must be between 1 and 100")]
         public int NumberOfGuests { get; set; }
-
+       
+        [Range(0, int.MaxValue, ErrorMessage = "Points to redeem must be non-negative")]
+        public int? PointsToRedeem { get; set; }
         public int? GuideId { get; set; }
 
         [Required]

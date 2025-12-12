@@ -44,7 +44,9 @@ namespace Application.Mappings
                     Notes = booking.TourDeparture.Notes
                 } : null,
                 // ===========================================
-
+                PointsRedeemed = (int)booking.PointsRedeemed,
+                PointsDiscount = (decimal)booking.PointsDiscount,
+                TotalAmount = booking.TotalAmount,
                 // Guide info
                 GuideId = booking.GuideId,
                 GuideName = booking.Guide?.FullName ?? string.Empty,
@@ -55,7 +57,6 @@ namespace Application.Mappings
                 // Booking details
                 TourDate = booking.TourDate,
                 NumberOfGuests = booking.NumberOfGuests,
-                TotalAmount = booking.TotalAmount,
                 Status = booking.Status.ToString(),
 
                 // Payment

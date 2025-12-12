@@ -47,7 +47,9 @@ namespace Domain.Entities
         public Guide? Guide { get; set; }
 
         public TourDeparture? TourDeparture { get; set; }
- 
+        public int? PointsRedeemed { get; set; }      
+        public decimal? PointsDiscount { get; set; } 
+
 
         public ICollection<BookingGuest> Guests { get; set; } = new List<BookingGuest>();
         public Review? TourReview { get; set; }
