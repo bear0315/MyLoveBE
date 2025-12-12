@@ -27,10 +27,11 @@ namespace BKApi.Controllers
         /// </summary>
         [HttpGet]
         public async Task<ActionResult<PagedResult<TourListResponse>>> GetTours(
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10)
+     [FromQuery] int pageNumber = 1,
+     [FromQuery] int pageSize = 10,
+     [FromQuery] bool includeAllStatuses = false)
         {
-            var result = await _tourService.GetAllToursAsync(pageNumber, pageSize);
+            var result = await _tourService.GetAllToursAsync(pageNumber, pageSize, includeAllStatuses);
             return Ok(result);
         }
 

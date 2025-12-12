@@ -63,11 +63,15 @@ namespace Application.Services
             return tour == null ? null : await MapToDetailResponseAsync(tour);
         }
 
-        public async Task<PagedResult<TourListResponse>> GetAllToursAsync(int pageNumber = 1, int pageSize = 10)
+        public async Task<PagedResult<TourListResponse>> GetAllToursAsync(
+     int pageNumber = 1,
+     int pageSize = 10,
+     bool includeAllStatuses = false) 
         {
             var (tours, totalCount) = await _tourRepository.SearchToursAsync(
                 pageNumber: pageNumber,
-                pageSize: pageSize);
+                pageSize: pageSize,
+                includeAllStatuses: includeAllStatuses);
 
             return new PagedResult<TourListResponse>
             {

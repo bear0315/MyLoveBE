@@ -20,22 +20,23 @@ namespace Domain.Interfaces
 
         // Filtering & Search
         Task<(IEnumerable<Tour> Tours, int TotalCount)> SearchToursAsync(
-            string? keyword = null,
-            int? destinationId = null,
-            TourCategory? category = null,
-            TourType? type = null,
-            TourDifficulty? difficulty = null,
-            decimal? minPrice = null,
-            decimal? maxPrice = null,
-            int? minDays = null,
-            int? maxDays = null,
-            int? minRating = null,
-            List<int>? tagIds = null,
-            int pageNumber = 1,
-            int pageSize = 10,
-            string sortBy = "created",
-            bool sortDesc = true
-        );
+    string? keyword = null,
+    int? destinationId = null,
+    TourCategory? category = null,
+    TourType? type = null,
+    TourDifficulty? difficulty = null,
+    TourStatus? status = null,
+    decimal? minPrice = null,
+    decimal? maxPrice = null,
+    int? minDays = null,
+    int? maxDays = null,
+    int? minRating = null,
+    List<int>? tagIds = null,
+    int pageNumber = 1,
+    int pageSize = 10,
+    string sortBy = "created",
+    bool sortDesc = true,
+    bool includeAllStatuses = false);
 
         // Statistics
         Task<int> GetTotalActiveToursAsync();

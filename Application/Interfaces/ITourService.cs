@@ -14,7 +14,6 @@ namespace Application.Interfaces
         // CRUD Operations
         Task<TourDetailResponse?> GetTourByIdAsync(int id);
         Task<TourDetailResponse?> GetTourBySlugAsync(string slug);
-        Task<PagedResult<TourListResponse>> GetAllToursAsync(int pageNumber = 1, int pageSize = 10);
         Task<TourDetailResponse> CreateTourAsync(CreateTourRequest request);
         Task<TourDetailResponse> UpdateTourAsync(int id, UpdateTourRequest request);
         Task<bool> DeleteTourAsync(int id);
@@ -28,6 +27,10 @@ namespace Application.Interfaces
         Task<List<TourListResponse>> GetRelatedToursAsync(int tourId, int take = 5);
         Task<List<TourListResponse>> GetToursByDestinationAsync(int destinationId, int pageNumber = 1, int pageSize = 10);
         Task<List<TourListResponse>> GetToursByCategoryAsync(Domain.Entities.Enums.TourCategory category, int pageNumber = 1, int pageSize = 10);
+        Task<PagedResult<TourListResponse>> GetAllToursAsync(
+     int pageNumber = 1,
+     int pageSize = 10,
+     bool includeAllStatuses = false);
 
         // Statistics
         Task<TourStatisticsDto> GetTourStatisticsAsync();

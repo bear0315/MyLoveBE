@@ -48,7 +48,8 @@ namespace Application.Response.Tour
         public List<TourReviewDto> Reviews { get; set; } = new();
 
         public List<TourDepartureDto> Departures { get; set; } = new();
+
     }
 
-    
+
 }
