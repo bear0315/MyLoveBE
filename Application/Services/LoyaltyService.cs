@@ -4,18 +4,18 @@ using Application.Response.Loyalty;
 using Domain.Entities;
 using Domain.Entities.Enums;
 using Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Application.Services
 {
     public class LoyaltyService : ILoyaltyService
     {
-        private const int POINTS_PER_10K_VND = 1000; // 10,000 VND = 1000 points
-        private const decimal MAX_REDEEM_PERCENTAGE = 0.5m; // Max 50% of booking
+        private const int POINTS_PER_10K_VND = 1000;
+        private const decimal MAX_REDEEM_PERCENTAGE = 0.5m;
 
         private readonly IUserRepository _userRepository;
         private readonly IPointsHistoryRepository _pointsHistoryRepository;
@@ -83,7 +83,6 @@ namespace Application.Services
 
             user.LoyaltyPoints += points;
 
-            // Check tier upgrade
             var newTier = CalculateTier(user.LoyaltyPoints);
             if (newTier != user.MemberTier)
             {
@@ -93,7 +92,6 @@ namespace Application.Services
 
             await _userRepository.UpdateAsync(user);
 
-            // Log history
             await _pointsHistoryRepository.CreateAsync(new PointsHistory
             {
                 UserId = userId,
@@ -134,9 +132,7 @@ namespace Application.Services
                 throw new InvalidOperationException(
                     $"Không đủ điểm. Bạn có {user.LoyaltyPoints} điểm nhưng cần {pointsToRedeem} điểm");
 
-            // 100 points = 1,000 VND
             decimal moneyValue = (decimal)pointsToRedeem * 10;
-
             await RedeemPointsAsync(userId, pointsToRedeem);
 
             return moneyValue;
@@ -150,7 +146,6 @@ namespace Application.Services
 
         public int CalculatePointsEarned(decimal amountPaid)
         {
-            // Mỗi 10,000 VND = 100 points (1% cashback)
             return (int)(amountPaid / 10000 * 100);
         }
 
@@ -210,7 +205,207 @@ namespace Application.Services
             };
         }
 
-        // Private helpers
+        // ============ NEW ADMIN METHODS ============
+
+        public async Task<AdminLoyaltyOverviewResponse> GetAdminLoyaltyOverviewAsync(
+            int page,
+            int pageSize,
+            string? searchTerm = null,
+            string? tierFilter = null)
+        {
+            var query = _userRepository.GetAll();
+
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(u =>
+                    u.FullName.Contains(searchTerm) ||
+                    u.Email.Contains(searchTerm));
+            }
+
+            if (!string.IsNullOrWhiteSpace(tierFilter) && Enum.TryParse<MemberTier>(tierFilter, out var tier))
+            {
+                query = query.Where(u => u.MemberTier == tier);
+            }
+
+            var totalCount = await query.CountAsync();
+            var users = await query
+                .OrderByDescending(u => u.LoyaltyPoints)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var userSummaries = new List<AdminUserLoyaltySummary>();
+
+            foreach (var user in users)
+            {
+                var earnedPoints = await _pointsHistoryRepository.GetAll()
+                    .Where(h => h.UserId == user.Id && h.TransactionType == "Earned")
+                    .SumAsync(h => h.Points);
+
+                var redeemedPoints = await _pointsHistoryRepository.GetAll()
+                    .Where(h => h.UserId == user.Id && h.TransactionType == "Redeemed")
+                    .SumAsync(h => Math.Abs(h.Points));
+
+                var estimatedSpending = earnedPoints * 100m;
+
+                userSummaries.Add(new AdminUserLoyaltySummary
+                {
+                    UserId = user.Id,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    CurrentPoints = user.LoyaltyPoints,
+                    CurrentTier = user.MemberTier,
+                    CurrentTierName = GetTierDisplayName(user.MemberTier),
+                    DiscountPercentage = GetDiscountRate(user.MemberTier),
+                    TotalPointsEarned = earnedPoints,
+                    TotalPointsRedeemed = redeemedPoints,
+                    MemberSince = user.MemberSince,
+                    LastTierUpdateAt = user.LastTierUpdateAt
+                });
+            }
+
+            var allUsers = await _userRepository.GetAll().ToListAsync();
+            var statistics = new AdminLoyaltyStatisticsSummary
+            {
+                TotalBronzeMembers = allUsers.Count(u => u.MemberTier == MemberTier.Bronze),
+                TotalSilverMembers = allUsers.Count(u => u.MemberTier == MemberTier.Silver),
+                TotalGoldMembers = allUsers.Count(u => u.MemberTier == MemberTier.Gold),
+                TotalActiveMembers = allUsers.Count,
+                TotalPointsInSystem = allUsers.Sum(u => (long)u.LoyaltyPoints)
+            };
+
+            return new AdminLoyaltyOverviewResponse
+            {
+                Users = userSummaries,
+                Statistics = statistics,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
+        public async Task<AdminUserLoyaltyDetailResponse> GetAdminUserLoyaltyDetailAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+                throw new InvalidOperationException("User not found");
+
+            var (nextTier, pointsToNext) = GetNextTierInfo(user.LoyaltyPoints, user.MemberTier);
+
+            var allHistory = await _pointsHistoryRepository.GetAllByUserIdAsync(userId);
+            var earnedPoints = allHistory.Where(h => h.TransactionType == "Earned").Sum(h => h.Points);
+            var redeemedPoints = allHistory.Where(h => h.TransactionType == "Redeemed").Sum(h => Math.Abs(h.Points));
+            var lastTransaction = allHistory.FirstOrDefault();
+
+            var estimatedSpending = earnedPoints * 100m;
+
+            return new AdminUserLoyaltyDetailResponse
+            {
+                UserId = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber,
+                CurrentPoints = user.LoyaltyPoints,
+                CurrentTier = user.MemberTier,
+                CurrentTierName = GetTierDisplayName(user.MemberTier),
+                DiscountPercentage = GetDiscountRate(user.MemberTier),
+                NextTier = nextTier,
+                NextTierName = nextTier.HasValue ? GetTierDisplayName(nextTier.Value) : null,
+                PointsToNextTier = pointsToNext,
+                TotalPointsEarned = earnedPoints,
+                TotalPointsRedeemed = redeemedPoints,
+                TotalTransactions = allHistory.Count,
+                MemberSince = user.MemberSince,
+                LastTierUpdateAt = user.LastTierUpdateAt,
+                LastTransactionAt = lastTransaction?.CreatedAt
+            };
+        }
+
+        public async Task<AdminAllPointsHistoryResponse> GetAdminAllPointsHistoryAsync(
+            int page,
+            int pageSize,
+            string? transactionType = null,
+            DateTime? fromDate = null,
+            DateTime? toDate = null)
+        {
+            var query = _pointsHistoryRepository.GetAll();
+
+            if (!string.IsNullOrWhiteSpace(transactionType))
+            {
+                query = query.Where(h => h.TransactionType == transactionType);
+            }
+
+            if (fromDate.HasValue)
+            {
+                query = query.Where(h => h.CreatedAt >= fromDate.Value);
+            }
+            if (toDate.HasValue)
+            {
+                query = query.Where(h => h.CreatedAt <= toDate.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+            var history = await query
+                .Include(h => h.User)
+                .OrderByDescending(h => h.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var data = history.Select(h => new AdminPointsHistoryItem
+            {
+                Id = h.Id,
+                UserId = h.UserId,
+                UserName = h.User.FullName,
+                UserEmail = h.User.Email,
+                TransactionType = h.TransactionType,
+                Points = h.Points,
+                Description = h.Description,
+                BookingCode = h.BookingCode,
+                CreatedAt = h.CreatedAt
+            }).ToList();
+
+            return new AdminAllPointsHistoryResponse
+            {
+                Data = data,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            };
+        }
+
+
+        public async Task AdminAdjustPointsAsync(int userId, int points, string reason, string adminEmail)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+                throw new InvalidOperationException("User not found");
+
+            if (points < 0 && user.LoyaltyPoints < Math.Abs(points))
+                throw new InvalidOperationException($"Không thể trừ {Math.Abs(points)} điểm. User chỉ có {user.LoyaltyPoints} điểm");
+
+            user.LoyaltyPoints += points;
+
+            var newTier = CalculateTier(user.LoyaltyPoints);
+            if (newTier != user.MemberTier)
+            {
+                user.MemberTier = newTier;
+                user.LastTierUpdateAt = DateTime.UtcNow;
+            }
+
+            await _userRepository.UpdateAsync(user);
+
+            await _pointsHistoryRepository.CreateAsync(new PointsHistory
+            {
+                UserId = userId,
+                TransactionType = points > 0 ? "Admin Added" : "Admin Deducted",
+                Points = points,
+                Description = $"{reason} (By: {adminEmail})",
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        // ============ PRIVATE HELPERS (UNCHANGED) ============
         private decimal GetDiscountRate(MemberTier tier) => tier switch
         {
             MemberTier.Bronze => 0.03m,
@@ -244,6 +439,41 @@ namespace Application.Services
                 _ => (null, null)
             };
         }
+
+        // ============ NEW PRIVATE HELPER FOR ADMIN ============
+        private MonthlyTrend CalculateMonthlyTrend(
+            List<PointsHistory> allHistory,
+            List<User> allUsers,
+            DateTime month)
+        {
+            var nextMonth = month.AddMonths(1);
+            var monthHistory = allHistory.Where(h => h.CreatedAt >= month && h.CreatedAt < nextMonth).ToList();
+
+            var pointsEarned = monthHistory
+                .Where(h => h.TransactionType == "Earned")
+                .Sum(h => h.Points);
+
+            var pointsRedeemed = Math.Abs(monthHistory
+                .Where(h => h.TransactionType == "Redeemed")
+                .Sum(h => h.Points));
+
+            var newMembers = allUsers
+                .Count(u => u.MemberSince >= month && u.MemberSince < nextMonth);
+
+            var tierUpgrades = allUsers
+                .Count(u => u.LastTierUpdateAt.HasValue &&
+                           u.LastTierUpdateAt.Value >= month &&
+                           u.LastTierUpdateAt.Value < nextMonth);
+
+            return new MonthlyTrend
+            {
+                Month = month.Month,
+                Year = month.Year,
+                PointsEarned = pointsEarned,
+                PointsRedeemed = pointsRedeemed,
+                NewMembers = newMembers,
+                TierUpgrades = tierUpgrades
+            };
+        }
     }
 }
-

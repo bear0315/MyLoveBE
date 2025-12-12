@@ -3,8 +3,6 @@ using Application.Response.Loyalty;
 using Domain.Entities.Enums;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Application.Interfaces
@@ -20,5 +18,32 @@ namespace Application.Interfaces
         int CalculatePointsEarned(decimal amountPaid);
         int CalculateMaxRedeemablePoints(decimal bookingAmount);
         List<MemberTierInfo> GetMemberTierInfo();
+
+     
+        /// <summary>
+        /// </summary>
+        Task<AdminLoyaltyOverviewResponse> GetAdminLoyaltyOverviewAsync(
+            int page,
+            int pageSize,
+            string? searchTerm = null,
+            string? tierFilter = null);
+
+        /// <summary>
+        /// </summary>
+        Task<AdminUserLoyaltyDetailResponse> GetAdminUserLoyaltyDetailAsync(int userId);
+
+        /// <summary>
+        /// </summary>
+        Task<AdminAllPointsHistoryResponse> GetAdminAllPointsHistoryAsync(
+            int page,
+            int pageSize,
+            string? transactionType = null,
+            DateTime? fromDate = null,
+            DateTime? toDate = null);
+
+      
+        /// <summary>
+        /// </summary>
+        Task AdminAdjustPointsAsync(int userId, int points, string reason, string adminEmail);
     }
 }

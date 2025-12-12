@@ -12,5 +12,9 @@ namespace Domain.Interfaces
         Task<PointsHistory> CreateAsync(PointsHistory history);
         Task<List<PointsHistory>> GetByUserIdAsync(int userId, int page, int pageSize);
         Task<int> GetCountByUserIdAsync(int userId);
+
+        Task<int> GetTotalPointsByUserIdAsync(int userId);
+        Task<List<PointsHistory>> GetAllByUserIdAsync(int userId);
+        IQueryable<PointsHistory> GetAll();
     }
 }

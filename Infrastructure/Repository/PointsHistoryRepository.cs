@@ -43,5 +43,26 @@ namespace Infrastructure.Repository
                 .Where(h => h.UserId == userId)
                 .CountAsync();
         }
+
+        // New methods
+        public async Task<int> GetTotalPointsByUserIdAsync(int userId)
+        {
+            return await _context.PointsHistories
+                .Where(h => h.UserId == userId)
+                .SumAsync(h => h.Points);
+        }
+
+        public async Task<List<PointsHistory>> GetAllByUserIdAsync(int userId)
+        {
+            return await _context.PointsHistories
+                .Where(h => h.UserId == userId)
+                .OrderByDescending(h => h.CreatedAt)
+                .ToListAsync();
+        }
+
+        public IQueryable<PointsHistory> GetAll()
+        {
+            return _context.PointsHistories.AsQueryable();
+        }
     }
 }

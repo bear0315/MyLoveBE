@@ -24,9 +24,45 @@ namespace Infrastructure.Repository
             return await _context.Users
                 .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
         }
+
         public IQueryable<User> GetAll()
         {
             return _context.Users.Where(u => !u.IsDeleted).AsQueryable();
+        }
+
+    
+        /// <summary>
+        /// Lấy danh sách tất cả user (materialized list)
+        /// </summary>
+        public async Task<List<User>> GetAllAsync()
+        {
+            return await _context.Users
+                .Where(u => !u.IsDeleted)
+                .OrderBy(u => u.Id)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Lấy danh sách user với phân trang
+        /// </summary>
+        public async Task<List<User>> GetAllAsync(int page, int pageSize)
+        {
+            return await _context.Users
+                .Where(u => !u.IsDeleted)
+                .OrderBy(u => u.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Đếm tổng số user
+        /// </summary>
+        public async Task<int> GetTotalCountAsync()
+        {
+            return await _context.Users
+                .Where(u => !u.IsDeleted)
+                .CountAsync();
         }
 
         public async Task<User?> GetByEmailAsync(string email)
@@ -78,5 +114,7 @@ namespace Infrastructure.Repository
         {
             return await _context.Users.AnyAsync(u => u.Email == email && !u.IsDeleted);
         }
+
+
     }
 }

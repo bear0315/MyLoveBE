@@ -18,5 +18,6 @@ namespace Domain.Interfaces
         Task<bool> DeleteAsync(int id);
         Task<bool> ExistsAsync(int id);
         Task<bool> EmailExistsAsync(string email);
+        Task<List<User>> GetAllAsync();
     }
 }
