@@ -2,6 +2,7 @@
 using Domain.Entities.Enums;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Domain.Entities
 {
@@ -47,10 +48,22 @@ namespace Domain.Entities
         public Guide? Guide { get; set; }
 
         public TourDeparture? TourDeparture { get; set; }
-        public int? PointsRedeemed { get; set; }      
-        public decimal? PointsDiscount { get; set; } 
+        public int PointsRedeemed { get; set; } = 0;
+        public decimal PointsDiscount { get; set; } = 0;
 
+        // ============ PRICING FIELDS (UPDATED) ============
+        /// <summary>
+        /// Giá gốc = (Price * Guests) + Service Fee
+        /// TRƯỚC KHI áp dụng bất kỳ giảm giá nào
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal OriginalAmount { get; set; }
 
+        /// <summary>
+        /// Giảm giá từ hạng thành viên (VND)
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal MemberDiscount { get; set; }
         public ICollection<BookingGuest> Guests { get; set; } = new List<BookingGuest>();
         public Review? TourReview { get; set; }
         public GuideReview? GuideReview { get; set; }

@@ -2,11 +2,6 @@
 using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repository
@@ -23,15 +18,24 @@ namespace Infrastructure.Repository
         public async Task<Booking?> GetByIdAsync(int id)
         {
             return await _context.Bookings
-                .Include(b => b.Guide)       
-                .Include(b => b.Guests)      
-                .Include(b => b.Tour)      
-                .Include(b => b.User)      
+                .Include(b => b.User)
+                .Include(b => b.Tour)
+                    .ThenInclude(t => t.Destination)
+                .Include(b => b.TourDeparture)  
+                .Include(b => b.Guide)
+                .Include(b => b.Guests)
                 .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted);
         }
+
         public async Task<Booking?> GetByBookingCodeAsync(string bookingCode)
         {
             return await _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Tour)
+                    .ThenInclude(t => t.Destination)
+                .Include(b => b.TourDeparture)
+                .Include(b => b.Guide)
+                .Include(b => b.Guests)
                 .FirstOrDefaultAsync(b => b.BookingCode == bookingCode && !b.IsDeleted);
         }
 
@@ -41,6 +45,7 @@ namespace Infrastructure.Repository
                 .Include(b => b.User)
                 .Include(b => b.Tour)
                     .ThenInclude(t => t.Destination)
+                .Include(b => b.TourDeparture)  
                 .Include(b => b.Guide)
                 .Include(b => b.Guests)
                 .FirstOrDefaultAsync(b => b.Id == id && !b.IsDeleted);
@@ -51,6 +56,8 @@ namespace Infrastructure.Repository
             return _context.Bookings
                 .Include(b => b.User)
                 .Include(b => b.Tour)
+                    .ThenInclude(t => t.Destination)
+                .Include(b => b.TourDeparture)  
                 .Include(b => b.Guide)
                 .Where(b => !b.IsDeleted)
                 .AsQueryable();
@@ -58,30 +65,10 @@ namespace Infrastructure.Repository
 
         public IQueryable<Booking> GetAllBasic()
         {
-            Console.WriteLine($"[BookingRepository] GetAllBasic called");
-            Console.WriteLine($"[BookingRepository] _context is null: {_context == null}");
-
-            if (_context != null)
-            {
-                Console.WriteLine($"[BookingRepository] _context.Bookings is null: {_context.Bookings == null}");
-            }
-
-            if (_context == null)
-                throw new InvalidOperationException("DatabaseContext is NULL in BookingRepository");
-
-            if (_context.Bookings == null)
-                throw new InvalidOperationException("Bookings DbSet is NULL in DatabaseContext");
-
-            var query = _context.Bookings.AsNoTracking();
-            Console.WriteLine($"[BookingRepository] AsNoTracking query created: {query != null}");
-
-            var filtered = query.Where(b => !b.IsDeleted);
-            Console.WriteLine($"[BookingRepository] Where filter applied: {filtered != null}");
-
-            var result = filtered.AsQueryable();
-            Console.WriteLine($"[BookingRepository] AsQueryable result: {result != null}");
-
-            return result;
+            return _context.Bookings
+                .AsNoTracking()
+                .Where(b => !b.IsDeleted)
+                .AsQueryable();
         }
 
         public async Task<List<Booking>> GetByUserIdAsync(int userId)
@@ -89,6 +76,7 @@ namespace Infrastructure.Repository
             return await _context.Bookings
                 .Include(b => b.Tour)
                     .ThenInclude(t => t.Destination)
+                .Include(b => b.TourDeparture)
                 .Include(b => b.Guide)
                 .Include(b => b.Guests)
                 .Where(b => b.UserId == userId && !b.IsDeleted)
@@ -100,6 +88,7 @@ namespace Infrastructure.Repository
         {
             return await _context.Bookings
                 .Include(b => b.User)
+                .Include(b => b.TourDeparture)  
                 .Include(b => b.Guide)
                 .Include(b => b.Guests)
                 .Where(b => b.TourId == tourId && !b.IsDeleted)
@@ -112,6 +101,8 @@ namespace Infrastructure.Repository
             return await _context.Bookings
                 .Include(b => b.User)
                 .Include(b => b.Tour)
+                    .ThenInclude(t => t.Destination)
+                .Include(b => b.TourDeparture)  
                 .Include(b => b.Guests)
                 .Where(b => b.GuideId == guideId && !b.IsDeleted)
                 .OrderByDescending(b => b.TourDate)

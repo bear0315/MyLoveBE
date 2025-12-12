@@ -44,8 +44,8 @@ namespace Application.Mappings
                     Notes = booking.TourDeparture.Notes
                 } : null,
                 // ===========================================
-                PointsRedeemed = (int)booking.PointsRedeemed,
-                PointsDiscount = (decimal)booking.PointsDiscount,
+                PointsRedeemed = booking.PointsRedeemed,    
+                PointsDiscount = booking.PointsDiscount,    
                 TotalAmount = booking.TotalAmount,
                 // Guide info
                 GuideId = booking.GuideId,

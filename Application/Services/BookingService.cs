@@ -314,7 +314,6 @@ namespace Application.Services
                 TourDeparture? tourDeparture = null;
                 int? selectedDepartureId = null;
 
-                // Option 1: User chọn departure cụ thể
                 if (request.TourDepartureId.HasValue)
                 {
                     tourDeparture = await _tourDepartureRepository.GetByIdAsync(request.TourDepartureId.Value);
@@ -358,7 +357,6 @@ namespace Application.Services
 
                     selectedDepartureId = tourDeparture.Id;
                 }
-                // Option 2: Tự động tìm departure theo TourDate
                 else
                 {
                     tourDeparture = await _tourDepartureRepository.GetByTourAndDateAsync(
@@ -390,7 +388,6 @@ namespace Application.Services
                     }
                     else
                     {
-                        // Fallback: Kiểm tra theo cách cũ
                         var existingGuests = await _bookingRepository
                             .GetTotalBookingsForTourOnDateAsync(request.TourId, request.TourDate);
 
@@ -415,32 +412,47 @@ namespace Application.Services
                     };
                 }
 
-                // ==================== TÍNH GIÁ GỐC ====================
-                var effectivePrice = tourDeparture?.SpecialPrice ?? tour.Price;
-                var originalAmount = effectivePrice * request.NumberOfGuests; // VND
+                // ==================== SỬ DỤNG GIÁ TỪ FRONTEND ====================
+                // Frontend đã tính toán đầy đủ, backend chỉ validate và lưu
+                var originalAmount = request.OriginalAmount;
+                var totalAmount = request.TotalAmount;
+                var memberDiscount = request.MemberDiscount;
+                var pointsDiscount = request.PointsDiscount;
+                var pointsRedeemed = request.PointsToRedeem ?? 0;
 
-                // ==================== GIẢM GIÁ HẠNG THÀNH VIÊN ====================
-                var memberDiscount = _loyaltyService.CalculateDiscount(originalAmount, user.MemberTier);
-                var amountAfterMemberDiscount = originalAmount - memberDiscount;
+                // Log để debug
+                Console.WriteLine($"=== PRICING FROM FRONTEND ===");
+                Console.WriteLine($"Original Amount: {originalAmount:N0} VND");
+                Console.WriteLine($"Member Discount: {memberDiscount:N0} VND ({request.MemberTier})");
+                Console.WriteLine($"Points Discount: {pointsDiscount:N0} VND ({pointsRedeemed} points)");
+                Console.WriteLine($"Total Amount: {totalAmount:N0} VND");
+                Console.WriteLine($"============================");
 
-                // ==================== XỬ LÝ ĐỔI ĐIỂM ====================
-                decimal pointsDiscount = 0;
-                int pointsRedeemed = 0;
-
-                if (request.PointsToRedeem.HasValue && request.PointsToRedeem.Value > 0)
+                // ==================== VALIDATE PRICING ====================
+                // Kiểm tra tổng giá có hợp lý không
+                var expectedTotal = originalAmount - memberDiscount - pointsDiscount;
+                if (Math.Abs(expectedTotal - totalAmount) > 1) // Cho phép sai số 1 VND do làm tròn
                 {
-                    // Validate 1: Điểm phải là bội số của 100
-                    if (request.PointsToRedeem.Value % 100 != 0)
+                    return new BaseResponse<BookingResponse>
+                    {
+                        Success = false,
+                        Message = $"Lỗi tính giá: Expected {expectedTotal:N0} VND, got {totalAmount:N0} VND"
+                    };
+                }
+
+                // Validate points nếu có dùng
+                if (pointsRedeemed > 0)
+                {
+                    if (pointsRedeemed % 100 != 0)
                     {
                         return new BaseResponse<BookingResponse>
                         {
                             Success = false,
-                            Message = "Số điểm đổi phải là bội số của 100 (100 điểm = 1,000 VND)"
+                            Message = "Số điểm đổi phải là bội số của 100"
                         };
                     }
 
-                    // Validate 2: Điểm có đủ không
-                    if (user.LoyaltyPoints < request.PointsToRedeem.Value)
+                    if (user.LoyaltyPoints < pointsRedeemed)
                     {
                         return new BaseResponse<BookingResponse>
                         {
@@ -449,33 +461,21 @@ namespace Application.Services
                         };
                     }
 
-                    // Validate 3: Không vượt quá 50% giá trị booking
-                    var maxPoints = _loyaltyService.CalculateMaxRedeemablePoints(amountAfterMemberDiscount);
-                    if (request.PointsToRedeem.Value > maxPoints)
+                    // Validate giảm giá từ điểm: 100 points = 1,000 VND
+                    var expectedPointsDiscount = pointsRedeemed * 10;
+                    if (Math.Abs(pointsDiscount - expectedPointsDiscount) > 1)
                     {
-                        var maxValue = maxPoints * 10; // 100 points = 1,000 VND
                         return new BaseResponse<BookingResponse>
                         {
                             Success = false,
-                            Message = $"Tối đa {maxPoints:N0} điểm (50% giá trị booking = {maxValue:N0} VND)"
+                            Message = $"Lỗi quy đổi điểm: {pointsRedeemed} điểm = {expectedPointsDiscount:N0} VND"
                         };
                     }
-
-                    // Chuyển đổi điểm thành tiền: 100 points = 1,000 VND
-                    pointsDiscount = await _loyaltyService.ConvertPointsToMoneyAsync(
-                        userId,
-                        request.PointsToRedeem.Value);
-
-                    pointsRedeemed = request.PointsToRedeem.Value;
                 }
-
-                // ==================== TÍNH TỔNG GIÁ CUỐI CÙNG ====================
-                var totalAmount = amountAfterMemberDiscount - pointsDiscount;
 
                 // ==================== XỬ LÝ GUIDE SELECTION ====================
                 int? selectedGuideId = null;
 
-                // Priority 1: Default guide của departure (nếu có)
                 if (tourDeparture?.DefaultGuideId != null)
                 {
                     var isGuideAvailable = await _tourService.IsGuideAvailableAsync(
@@ -488,7 +488,6 @@ namespace Application.Services
                     }
                 }
 
-                // Priority 2: Guide do khách chọn
                 if (!selectedGuideId.HasValue && request.GuideId.HasValue)
                 {
                     var availableGuides = await _tourService.GetAvailableGuidesForTourAsync(
@@ -517,7 +516,6 @@ namespace Application.Services
 
                     selectedGuideId = request.GuideId.Value;
                 }
-                // Priority 3: Default guide của tour
                 else if (!selectedGuideId.HasValue)
                 {
                     var defaultGuideId = await _tourService.GetDefaultGuideIdForTourAsync(
@@ -543,19 +541,35 @@ namespace Application.Services
                     GuideId = selectedGuideId,
                     TourDate = request.TourDate,
                     NumberOfGuests = request.NumberOfGuests,
+
+                    // ============ LƯU ĐẦY ĐỦ PRICING INFO ============
+                    OriginalAmount = originalAmount,
                     TotalAmount = totalAmount,
+                    MemberDiscount = memberDiscount,
+                    PointsRedeemed = pointsRedeemed,
+                    PointsDiscount = pointsDiscount,
+                    // ================================================
+
                     Status = BookingStatus.Pending,
                     PaymentStatus = PaymentStatus.Pending,
                     PaymentMethod = paymentMethod,
                     CustomerName = request.CustomerName,
                     CustomerEmail = request.CustomerEmail,
                     CustomerPhone = request.CustomerPhone,
-                    SpecialRequests = request.SpecialRequests,
-                    PointsRedeemed = pointsRedeemed,
-                    PointsDiscount = pointsDiscount
+                    SpecialRequests = request.SpecialRequests
                 };
 
                 var createdBooking = await _bookingRepository.CreateAsync(booking);
+
+                // ==================== TRỪ ĐIỂM THƯỞNG ====================
+                if (pointsRedeemed > 0)
+                {
+                    user.LoyaltyPoints -= pointsRedeemed;
+                    await _userRepository.UpdateAsync(user);
+
+                    await LogAuditAsync(userId, "POINTS_REDEEMED", "User", userId,
+                        $"Redeemed {pointsRedeemed} points for booking {bookingCode}. Remaining: {user.LoyaltyPoints}");
+                }
 
                 // ==================== TẠO BOOKING GUESTS ====================
                 if (request.Guests != null && request.Guests.Any())
@@ -585,31 +599,19 @@ namespace Application.Services
 
                 if (memberDiscount > 0)
                 {
-                    message += $"Giảm giá thành viên {user.MemberTier}: {memberDiscount:N0} VND. ";
+                    message += $"Giảm giá {request.MemberTier}: {memberDiscount:N0} VND. ";
                 }
 
                 if (pointsDiscount > 0)
                 {
-                    message += $"Giảm giá điểm thưởng: {pointsDiscount:N0} VND ({pointsRedeemed:N0} điểm đã sử dụng). ";
+                    message += $"Đổi {pointsRedeemed:N0} điểm = {pointsDiscount:N0} VND. ";
                 }
 
                 message += $"Tổng thanh toán: {totalAmount:N0} VND";
 
                 // ==================== LOG AUDIT ====================
-                var departureInfo = selectedDepartureId.HasValue
-                    ? $", Departure ID: {selectedDepartureId.Value}"
-                    : "";
-
-                var guideInfo = selectedGuideId.HasValue
-                    ? $", Guide ID: {selectedGuideId.Value}"
-                    : ", No guide assigned";
-
-                var pointsInfo = pointsRedeemed > 0
-                    ? $", Points redeemed: {pointsRedeemed}"
-                    : "";
-
                 await LogAuditAsync(userId, "BOOKING_CREATED", "Booking", createdBooking.Id,
-                    $"Booking created: {bookingCode}{departureInfo}{guideInfo}{pointsInfo}");
+                    $"Booking {bookingCode} | Original: {originalAmount:N0} | Member: -{memberDiscount:N0} | Points: -{pointsDiscount:N0} | Total: {totalAmount:N0}");
 
                 // ==================== RETURN RESPONSE ====================
                 return new BaseResponse<BookingResponse>
@@ -628,7 +630,6 @@ namespace Application.Services
                 };
             }
         }
-
         public async Task<BaseResponse<BookingResponse>> UpdateAsync(int id, UpdateBookingRequest request)
         {
             try
