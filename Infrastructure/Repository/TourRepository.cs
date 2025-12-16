@@ -103,38 +103,26 @@ namespace Infrastructure.Repository
         }
 
         public async Task<(IEnumerable<Tour> Tours, int TotalCount)> SearchToursAsync(
-     string? keyword = null,
-     int? destinationId = null,
-     TourCategory? category = null,
-     TourType? type = null,
-     TourDifficulty? difficulty = null,
-     TourStatus? status = null, 
-     decimal? minPrice = null,
-     decimal? maxPrice = null,
-     int? minDays = null,
-     int? maxDays = null,
-     int? minRating = null,
-     List<int>? tagIds = null,
-     int pageNumber = 1,
-     int pageSize = 10,
-     string sortBy = "created",
-     bool sortDesc = true,
-     bool includeAllStatuses = false) 
+            string? keyword = null,
+            int? destinationId = null,
+            TourCategory? category = null,
+            TourType? type = null,
+            TourDifficulty? difficulty = null,
+            decimal? minPrice = null,
+            decimal? maxPrice = null,
+            int? minDays = null,
+            int? maxDays = null,
+            int? minRating = null,
+            List<int>? tagIds = null,
+            int pageNumber = 1,
+        int pageSize = 10,
+            string sortBy = "created",
+            bool sortDesc = true)
         {
             var query = _context.Tours
                 .Include(t => t.Destination)
                 .Include(t => t.Images.Where(i => i.IsPrimary))
-                .AsQueryable();
-
-            if (!includeAllStatuses)
-            {
-                query = query.Where(t => t.Status == TourStatus.Active);
-            }
-
-            if (status.HasValue)
-            {
-                query = query.Where(t => t.Status == status.Value);
-            }
+                .Where(t => t.Status == TourStatus.Active);
 
             // Keyword search
             if (!string.IsNullOrWhiteSpace(keyword))
@@ -145,23 +133,31 @@ namespace Infrastructure.Repository
                     t.Location.Contains(keyword));
             }
 
-            // Filters (giữ nguyên)
+            // Filters
             if (destinationId.HasValue)
                 query = query.Where(t => t.DestinationId == destinationId.Value);
+
             if (category.HasValue)
                 query = query.Where(t => t.Category == category.Value);
+
             if (type.HasValue)
                 query = query.Where(t => t.Type == type.Value);
+
             if (difficulty.HasValue)
                 query = query.Where(t => t.Difficulty == difficulty.Value);
+
             if (minPrice.HasValue)
                 query = query.Where(t => t.Price >= minPrice.Value);
+
             if (maxPrice.HasValue)
                 query = query.Where(t => t.Price <= maxPrice.Value);
+
             if (minDays.HasValue)
                 query = query.Where(t => t.DurationDays >= minDays.Value);
+
             if (maxDays.HasValue)
                 query = query.Where(t => t.DurationDays <= maxDays.Value);
+
             if (minRating.HasValue)
                 query = query.Where(t => t.AverageRating >= minRating.Value);
 
@@ -190,7 +186,6 @@ namespace Infrastructure.Repository
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
-
             return (tours, totalCount);
         }
 

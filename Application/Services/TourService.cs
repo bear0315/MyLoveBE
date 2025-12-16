@@ -63,19 +63,21 @@ namespace Application.Services
             return tour == null ? null : await MapToDetailResponseAsync(tour);
         }
 
-        public async Task<PagedResult<TourListResponse>> GetAllToursAsync(
-     int pageNumber = 1,
-     int pageSize = 10,
-     bool includeAllStatuses = false) 
+        public async Task<PagedResult<TourListResponse>> GetAllToursAsync(int pageNumber = 1, int pageSize = 10)
         {
             var (tours, totalCount) = await _tourRepository.SearchToursAsync(
                 pageNumber: pageNumber,
-                pageSize: pageSize,
-                includeAllStatuses: includeAllStatuses);
+                pageSize: pageSize);
+
+            var items = new List<TourListResponse>();
+            foreach (var tour in tours)
+            {
+                items.Add(await MapToListResponseAsync(tour));
+            }
 
             return new PagedResult<TourListResponse>
             {
-                Items = tours.Select(MapToListResponse).ToList(),
+                Items = items,
                 TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize
@@ -456,9 +458,15 @@ namespace Application.Services
                 sortDesc: request.SortDesc
             );
 
+            var items = new List<TourListResponse>();
+            foreach (var tour in tours)
+            {
+                items.Add(await MapToListResponseAsync(tour));
+            }
+
             return new PagedResult<TourListResponse>
             {
-                Items = tours.Select(MapToListResponse).ToList(),
+                Items = items,
                 TotalCount = totalCount,
                 PageNumber = request.PageNumber,
                 PageSize = request.PageSize
@@ -468,19 +476,34 @@ namespace Application.Services
         public async Task<List<TourListResponse>> GetFeaturedToursAsync(int take = 10)
         {
             var tours = await _tourRepository.GetFeaturedToursAsync(take);
-            return tours.Select(MapToListResponse).ToList();
+            var items = new List<TourListResponse>();
+            foreach (var tour in tours)
+            {
+                items.Add(await MapToListResponseAsync(tour));
+            }
+            return items;
         }
 
         public async Task<List<TourListResponse>> GetPopularToursAsync(int take = 10)
         {
             var tours = await _tourRepository.GetPopularToursAsync(take);
-            return tours.Select(MapToListResponse).ToList();
+            var items = new List<TourListResponse>();
+            foreach (var tour in tours)
+            {
+                items.Add(await MapToListResponseAsync(tour));
+            }
+            return items;
         }
 
         public async Task<List<TourListResponse>> GetRelatedToursAsync(int tourId, int take = 5)
         {
             var tours = await _tourRepository.GetRelatedToursAsync(tourId, take);
-            return tours.Select(MapToListResponse).ToList();
+            var items = new List<TourListResponse>();
+            foreach (var tour in tours)
+            {
+                items.Add(await MapToListResponseAsync(tour));
+            }
+            return items;
         }
 
         public async Task<List<TourListResponse>> GetToursByDestinationAsync(int destinationId, int pageNumber = 1, int pageSize = 10)
@@ -490,7 +513,13 @@ namespace Application.Services
                 pageNumber: pageNumber,
                 pageSize: pageSize
             );
-            return tours.Select(MapToListResponse).ToList();
+
+            var items = new List<TourListResponse>();
+            foreach (var tour in tours)
+            {
+                items.Add(await MapToListResponseAsync(tour));
+            }
+            return items;
         }
 
         public async Task<List<TourListResponse>> GetToursByCategoryAsync(TourCategory category, int pageNumber = 1, int pageSize = 10)
@@ -500,7 +529,13 @@ namespace Application.Services
                 pageNumber: pageNumber,
                 pageSize: pageSize
             );
-            return tours.Select(MapToListResponse).ToList();
+
+            var items = new List<TourListResponse>();
+            foreach (var tour in tours)
+            {
+                items.Add(await MapToListResponseAsync(tour));
+            }
+            return items;
         }
 
         public async Task<TourStatisticsDto> GetTourStatisticsAsync()
@@ -725,8 +760,13 @@ namespace Application.Services
 
         #region Mapping Methods
 
-        private TourListResponse MapToListResponse(Tour tour)
+        private async Task<TourListResponse> MapToListResponseAsync(Tour tour)
         {
+            // Get available departures for this tour
+            var departures = await _departureRepository.GetAvailableDeparturesAsync(
+                tour.Id,
+                DateTime.UtcNow.Date);
+
             return new TourListResponse
             {
                 Id = tour.Id,
@@ -746,7 +786,24 @@ namespace Application.Services
                 TotalBookings = tour.TotalBookings,
                 PrimaryImageUrl = tour.Images.FirstOrDefault(i => i.IsPrimary)?.ImageUrl,
                 DestinationName = tour.Destination?.Name ?? "",
-                CreatedAt = tour.CreatedAt
+                CreatedAt = tour.CreatedAt,
+
+                // Map departures
+                Departures = departures.Select(d => new TourDepartureDto
+                {
+                    Id = d.Id,
+                    DepartureDate = d.DepartureDate,
+                    EndDate = d.EndDate,
+                    MaxGuests = d.MaxGuests,
+                    BookedGuests = d.BookedGuests,
+                    AvailableSlots = d.AvailableSlots,
+                    Price = d.SpecialPrice ?? tour.Price,
+                    HasSpecialPrice = d.SpecialPrice.HasValue,
+                    Status = d.Status.ToString(),
+                    Notes = d.Notes,
+                    DefaultGuideId = d.DefaultGuideId,
+                    DefaultGuideName = d.DefaultGuide?.FullName ?? d.DefaultGuide?.User?.FullName
+                }).ToList()
             };
         }
 

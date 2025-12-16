@@ -153,7 +153,7 @@ namespace Application.Services
                     return new BaseResponse<UserResponse>
                     {
                         Success = false,
-                        Message = "Email already exists"
+                        Message = "Email đã tồn tại, vui lòng nhập email khác"
                     };
                 }
 

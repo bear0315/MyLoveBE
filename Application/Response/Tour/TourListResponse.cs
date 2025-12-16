@@ -27,5 +27,7 @@ namespace Application.Response.Tour
         public string? PrimaryImageUrl { get; set; }
         public string DestinationName { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
+        public List<TourDepartureDto> Departures { get; set; } = new();
+
     }
 }

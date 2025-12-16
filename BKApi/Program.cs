@@ -15,9 +15,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ==================== DATABASE ====================
 builder.Services.AddDbContext<DatabaseContext>(options =>
-    options.UseSqlServer(
+    options.UseMySql(
         builder.Configuration.GetConnectionString("BK"),
-        b => b.MigrationsAssembly("Infrastructure")
+        ServerVersion.AutoDetect(
+            builder.Configuration.GetConnectionString("BK")
+        ),
+        mySqlOptions => mySqlOptions.MigrationsAssembly("Infrastructure")
     )
 );
 

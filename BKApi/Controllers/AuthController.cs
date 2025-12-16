@@ -67,7 +67,7 @@ namespace BKApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
                     success = false,
-                    message = "An error occurred during login"
+                    message = "Đã xảy ra lỗi trong quá trình đăng nhập"
                 });
             }
         }
@@ -119,7 +119,7 @@ namespace BKApi.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
                     success = false,
-                    message = "An error occurred during token refresh"
+                    message = "Đã xảy ra lỗi trong quá trình token refresh"
                 });
             }
         }
